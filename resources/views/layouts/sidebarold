@@ -1,0 +1,595 @@
+<nav class="nxl-navigation">
+    <div class="navbar-wrapper">
+        <div class="m-header">
+            <a href="{{ route('dashboard') }}" class="b-brand">
+                <img src="{{ asset('assets/images/logo-full.png') }}" style="width: 100%;" alt="" class="logo logo-lg" />
+                <img src="{{ asset('assets/images/logo-abbr.png') }}" alt="" class="logo logo-sm" />
+            </a>
+        </div>
+        <div class="navbar-content">
+            <ul class="nxl-navbar">
+
+                {{-- ══ DASHBOARD ══ --}}
+                {{-- Permission: "view_dashboard sidebar" --}}
+                @can('view_dashboard sidebar')
+                <li class="nxl-item">
+                    <a href="{{ route('dashboard') }}" class="nxl-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                        <span class="nxl-micon"><i class="feather-airplay"></i></span>
+                        <span class="nxl-mtext">Dashboard</span>
+                    </a>
+                </li>
+                @endcan
+
+                {{-- ══ PURCHASE MANAGEMENT ══ --}}
+                {{-- Top: "view_purchases sidebar" | Sub: "view_all_purchases sidebar", "create_purchase sidebar" --}}
+                @can('view_purchases sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('purchases.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-shopping-bag"></i></span>
+                        <span class="nxl-mtext">Purchase Management</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        @can('view_all_purchases sidebar')
+                        <li class="nxl-item {{ request()->routeIs('purchases.index') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('purchases.index') }}">
+                                <i class="feather-list me-2"></i> All Purchases
+                            </a>
+                        </li>
+                        @endcan
+                        @can('create_purchase sidebar')
+                        <li class="nxl-item {{ request()->routeIs('purchases.create') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('purchases.create') }}">
+                                <i class="feather-plus-circle me-2"></i> New Purchase
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view_all_product_items sidebar')
+<li class="nxl-item {{ request()->routeIs('product-items.*') ? 'active' : '' }}">
+    <a class="nxl-link" href="{{ route('product-items.index') }}">
+        <i class="feather-layers me-2"></i> Product Items
+    </a>
+</li>
+@endcan
+                    </ul>
+                </li>
+                @endcan
+
+
+                @can('view_all_product_items sidebar')
+<li class="nxl-item {{ request()->routeIs('tag-management.*') ? 'active' : '' }}">
+    <a class="nxl-link" href="{{ route('tag-management.index') }}">
+        <i class="feather-printer me-2"></i> Tag Management
+    </a>
+</li>
+@endcan
+                {{-- ══ QUOTATIONS ══ --}}
+                {{-- Top: "view_quotations sidebar" | Sub: "view_all_quotations sidebar", "create_quotation sidebar" --}}
+                @can('view_quotations sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('quotations.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-file-text"></i></span>
+                        <span class="nxl-mtext">Quotations</span>
+                        @php $openQuotCount = \App\Models\Quotation::whereIn('status', ['sent','accepted'])->count(); @endphp
+                        @if($openQuotCount > 0)
+                            <span class="nxl-badge bg-warning text-dark">{{ $openQuotCount }}</span>
+                        @endif
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        @can('view_all_quotations sidebar')
+                        <li class="nxl-item {{ request()->routeIs('quotations.index') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('quotations.index') }}">
+                                <i class="feather-list me-2"></i> All Quotations
+                            </a>
+                        </li>
+                        @php $acceptedCount = \App\Models\Quotation::where('status','accepted')->count(); @endphp
+                        @if($acceptedCount > 0)
+                        <li class="nxl-item">
+                            <a class="nxl-link text-success fw-semibold" href="{{ route('quotations.index') }}?status=accepted">
+                                <i class="feather-check-circle me-2"></i> Accepted ({{ $acceptedCount }})
+                            </a>
+                        </li>
+                        @endif
+                        @endcan
+                        @can('create_quotation sidebar')
+                        <li class="nxl-item {{ request()->routeIs('quotations.create') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('quotations.create') }}">
+                                <i class="feather-plus-circle me-2"></i> New Quotation
+                            </a>
+                        </li>
+                        @endcan
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ SALES ══ --}}
+                {{-- Top: "view_sales sidebar" | Sub: "view_all_sales sidebar", "create_sale sidebar", "view_returns sidebar" --}}
+                @can('view_sales sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('sales.*') || request()->routeIs('sale-returns.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-shopping-cart"></i></span>
+                        <span class="nxl-mtext">Sales</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        @can('view_all_sales sidebar')
+                        <li class="nxl-item {{ request()->routeIs('sales.index') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('sales.index') }}">
+                                <i class="feather-list me-2"></i> All Sales
+                            </a>
+                        </li>
+                        @endcan
+                        @can('create_sale sidebar')
+                        <li class="nxl-item {{ request()->routeIs('sales.create') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('sales.create') }}">
+                                <i class="feather-plus-circle me-2"></i> New Sale
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view_returns sidebar')
+                        <li class="nxl-item {{ request()->routeIs('sale-returns.*') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('sale-returns.index') }}">
+                                <i class="feather-rotate-ccw me-2"></i> Sales Returns
+                            </a>
+                        </li>
+                        @endcan
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ OLD JEWELLERY ══ --}}
+                {{-- Top: "view_old_jewellery sidebar" | Sub: "view_oj_bags sidebar", "create_oj_bag sidebar" --}}
+                @can('view_old_jewellery sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('old-jewellery-bags.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-package"></i></span>
+                        <span class="nxl-mtext">Old Jewellery</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        @can('view_oj_bags sidebar')
+                        <li class="nxl-item {{ request()->routeIs('old-jewellery-bags.index') ? 'active' : '' }}">
+                            <a href="{{ route('old-jewellery-bags.index') }}" class="nxl-link">
+                                <i class="feather-archive me-2"></i> OJ Bags
+                                @php $openBagsSidebar = \App\Models\OldJewelleryBag::where('status', 'open')->count(); @endphp
+                                @if($openBagsSidebar > 0)
+                                    <span class="badge bg-success ms-auto" style="font-size:9px;">{{ $openBagsSidebar }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcan
+                        @can('create_oj_bag sidebar')
+                        <li class="nxl-item {{ request()->routeIs('old-jewellery-bags.create') ? 'active' : '' }}">
+                            <a href="{{ route('old-jewellery-bags.create') }}" class="nxl-link">
+                                <i class="feather-plus-circle me-2"></i> New Bag
+                                @php
+                                    $unbaggedSidebar = \App\Models\OldJewelleryItem::where('status', 'received')
+                                        ->whereNotIn('id', fn($q) => $q->select('old_jewellery_item_id')->from('old_jewellery_bag_items'))
+                                        ->count();
+                                @endphp
+                                @if($unbaggedSidebar > 0)
+                                    <span class="badge bg-danger ms-auto" style="font-size:9px;">{{ $unbaggedSidebar }}</span>
+                                @endif
+                            </a>
+                        </li>
+                        @endcan
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ DAILY RATES ══ --}}
+                {{-- Permission: "view_daily_rates sidebar" (no sub-items) --}}
+                @can('view_daily_rates sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('daily-rates.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-trending-up"></i></span>
+                        <span class="nxl-mtext">Daily Rates</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        <li class="nxl-item {{ request()->routeIs('daily-rates.*') ? 'active' : '' }}">
+                            <a href="{{ route('daily-rates.index') }}" class="nxl-link">
+                                <i class="feather-bar-chart-2 me-2"></i> View Rates
+                                @php $todaySidebarCount = \App\Models\DailyRate::whereDate('effective_date', today())->where('status','active')->count(); @endphp
+                                @if($todaySidebarCount === 0)
+                                    <span class="badge bg-danger ms-auto" style="font-size:9px;">!</span>
+                                @else
+                                    <span class="badge bg-success ms-auto" style="font-size:9px;">{{ $todaySidebarCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ USERS MANAGEMENT ══ --}}
+                {{-- Top: "view_users sidebar" | Sub: "view_all_users sidebar", "create_user sidebar" --}}
+                @can('view_users sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('users.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-users"></i></span>
+                        <span class="nxl-mtext">Users Management</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        @can('view_all_users sidebar')
+                        <li class="nxl-item {{ request()->routeIs('users.index') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('users.index') }}">
+                                <i class="feather-list me-2"></i> Users List
+                            </a>
+                        </li>
+                        @endcan
+                        @can('create_user sidebar')
+                        <li class="nxl-item {{ request()->routeIs('users.create') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('users.create') }}">
+                                <i class="feather-user-plus me-2"></i> Create User
+                            </a>
+                        </li>
+                        @endcan
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ CONTACTS ══ --}}
+                {{-- Top: "view_contacts sidebar" | Sub: "view_all_contacts sidebar", "view_customers sidebar", --}}
+                {{--      "view_suppliers sidebar", "create_contact sidebar", "view_advances sidebar" --}}
+                @can('view_contacts sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('contacts.*') || request()->routeIs('customer-advances.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-book"></i></span>
+                        <span class="nxl-mtext">Contacts</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        @can('view_all_contacts sidebar')
+                        <li class="nxl-item {{ request()->routeIs('contacts.index') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('contacts.index') }}">
+                                <i class="feather-users me-2"></i> All Contacts
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view_customers sidebar')
+                        <li class="nxl-item {{ request()->routeIs('contacts.customers') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('contacts.customers') }}">
+                                <i class="feather-user me-2"></i> Customers
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view_suppliers sidebar')
+                        <li class="nxl-item {{ request()->routeIs('contacts.suppliers') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('contacts.suppliers') }}">
+                                <i class="feather-truck me-2"></i> Suppliers
+                            </a>
+                        </li>
+                        @endcan
+                        @can('create_contact sidebar')
+                        <li class="nxl-item">
+                            <a class="nxl-link" href="{{ route('contacts.create') }}">
+                                <i class="feather-user-plus me-2"></i> Add Contact
+                            </a>
+                        </li>
+                        <li class="nxl-item">
+                            <a class="nxl-link" href="{{ route('contacts.create') }}?type=supplier">
+                                <i class="feather-plus-circle me-2"></i> Add Supplier
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view_advances sidebar')
+                        <li class="nxl-item {{ request()->routeIs('customer-advances.*') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('customer-advances.index') }}">
+                                <i class="feather-trending-up me-2"></i> Customer Advances
+                            </a>
+                        </li>
+                        @endcan
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ MASTERS ══ --}}
+                {{-- Permission: "view_masters sidebar" (all sub-items visible if top is granted) --}}
+                @can('view_masters sidebar')
+                <li class="nxl-item nxl-hasmenu">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-database"></i></span>
+                        <span class="nxl-mtext">Masters</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        <li class="nxl-item nxl-hasmenu">
+                            <a href="javascript:void(0);" class="nxl-link">
+                                <i class="feather-grid me-2"></i>
+                                <span class="nxl-mtext">Product Category</span>
+                                <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('product-categories.index') }}">
+                                        <i class="feather-list me-2"></i> All Product Category
+                                    </a>
+                                </li>
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('product-categories.create') }}">
+                                        <i class="feather-plus-circle me-2"></i> Add Product Category
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nxl-item nxl-hasmenu">
+                            <a href="javascript:void(0);" class="nxl-link">
+                                <i class="feather-copy me-2"></i>
+                                <span class="nxl-mtext">Product Types</span>
+                                <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('product-types.index') }}">
+                                        <i class="feather-list me-2"></i> All Types
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nxl-item nxl-hasmenu">
+    <a href="javascript:void(0);" class="nxl-link">
+        <i class="feather-layers me-2"></i>
+        <span class="nxl-mtext">Product Sub Types</span>
+        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+    </a>
+    <ul class="nxl-submenu">
+        <li class="nxl-item">
+            <a class="nxl-link" href="{{ route('product-sub-types.index') }}">
+                <i class="feather-list me-2"></i> All Sub Types
+            </a>
+        </li>
+    </ul>
+</li>
+                           <li class="nxl-item nxl-hasmenu">
+                            <a href="javascript:void(0);" class="nxl-link">
+                                <i class="feather-box me-2"></i>
+                                <span class="nxl-mtext">Products</span>
+                                <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('product-master.index') }}">
+                                        <i class="feather-layers me-2"></i> All Products
+                                    </a>
+                                </li>
+                              
+                            </ul>
+                        </li>
+                        <li class="nxl-item nxl-hasmenu">
+                            <a href="javascript:void(0);" class="nxl-link">
+                                <i class="feather-sliders me-2"></i>
+                                <span class="nxl-mtext">Units</span>
+                                <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('units.index') }}">
+                                        <i class="feather-list me-2"></i> All Units
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nxl-item nxl-hasmenu">
+                            <a href="javascript:void(0);" class="nxl-link">
+                                <i class="feather-monitor me-2"></i>
+                                <span class="nxl-mtext">Counters</span>
+                                <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('counters.index') }}">
+                                        <i class="feather-list me-2"></i> All Counters
+                                    </a>
+                                </li>
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('counters.create') }}">
+                                        <i class="feather-plus-circle me-2"></i> Add Counter
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        {{-- <li class="nxl-item nxl-hasmenu">
+                            <a href="javascript:void(0);" class="nxl-link">
+                                <i class="feather-layers me-2"></i>
+                                <span class="nxl-mtext">Design Types</span>
+                                <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('masters.design-types.index') }}">
+                                        <i class="feather-list me-2"></i> All Design Types
+                                    </a>
+                                </li>
+                            </ul>
+                        </li> --}}
+                     
+                        <li class="nxl-item nxl-hasmenu">
+                            <a href="javascript:void(0);" class="nxl-link">
+                                <i class="feather-star me-2"></i>
+                                <span class="nxl-mtext">Gold Schemes</span>
+                                <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                            </a>
+                            <ul class="nxl-submenu">
+                                <li class="nxl-item">
+                                    <a class="nxl-link" href="{{ route('gold_schemes.index') }}">
+                                        <i class="feather-list me-2"></i> All Schemes
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ EXPENSES ══ --}}
+                {{-- Permission: "view_expenses sidebar" --}}
+                @can('view_expenses sidebar')
+                <li class="nxl-item {{ request()->routeIs('expenses.*') ? 'active' : '' }}">
+                    <a class="nxl-link {{ request()->routeIs('expenses.*') ? 'active' : '' }}"
+                       href="{{ route('expenses.index') }}">
+                        <span class="nxl-micon"><i class="feather-minus-circle"></i></span>
+                        <span class="nxl-mtext">Expenses</span>
+                    </a>
+                </li>
+                @endcan
+              
+<li class="nxl-item {{ request()->routeIs('activity-logs.*') ? 'active' : '' }}">
+    <a class="nxl-link {{ request()->routeIs('activity-logs.*') ? 'active' : '' }}"
+       href="{{ route('activity-logs.index') }}">
+        <span class="nxl-micon"><i class="feather-clock"></i></span>
+        <span class="nxl-mtext">Activity Logs</span>
+    </a>
+</li>
+<li class="nxl-item {{ request()->routeIs('credits.*') ? 'active' : '' }}">
+    <a class="nxl-link {{ request()->routeIs('credits.*') ? 'active' : '' }}"
+       href="{{ route('credits.index') }}">
+        <span class="nxl-micon"><i class="feather-credit-card"></i></span>
+        <span class="nxl-mtext">Credit Bills</span>
+    </a>
+</li>
+
+                {{-- ══ CUSTOMER SCHEMES ══ --}}
+                {{-- Permission: "view_customer_schemes sidebar" --}}
+                @can('view_customer_schemes sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('customer_schemes.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-award"></i></span>
+                        <span class="nxl-mtext">Customer Schemes</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        <li class="nxl-item {{ request()->routeIs('customer_schemes.index') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('customer_schemes.index') }}">
+                                <i class="feather-list me-2"></i> All Schemes
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ REPORTS ══ --}}
+                {{-- Permission: "view_reports sidebar" (all sub-reports visible if top is granted) --}}
+                @can('view_reports sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-bar-chart-2"></i></span>
+                        <span class="nxl-mtext">Reports</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        <li class="nxl-item {{ request()->routeIs('reports.sales') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('reports.sales') }}">
+                                <i class="feather-shopping-cart me-2"></i> Sales Report
+                            </a>
+                        </li>
+                        <li class="nxl-item {{ request()->routeIs('reports.old_jewellery') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('reports.old_jewellery') }}">
+                                <i class="feather-repeat me-2"></i> Old Jewellery Report
+                            </a>
+                        </li>
+                        <li class="nxl-item {{ request()->routeIs('reports.bulk_purchase') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('reports.bulk_purchase') }}">
+                                <i class="feather-package me-2"></i> Bulk Purchase Report
+                            </a>
+                        </li>
+                        <li class="nxl-item {{ request()->routeIs('reports.customer-schemes') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('reports.customer-schemes') }}">
+                                <i class="feather-award me-2"></i> Customer Scheme Report
+                            </a>
+                        </li>
+                        <li class="nxl-item {{ request()->routeIs('reports.day_report') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('reports.day_report') }}">
+                                <i class="feather-sun me-2"></i> Day Report
+                            </a>
+                        </li>
+                        <li class="nxl-item {{ request()->routeIs('reports.income-summary') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('reports.income-summary') }}">
+                                <i class="feather-trending-up me-2"></i> Income Summary
+                            </a>
+                        </li>
+                        <li class="nxl-item {{ request()->routeIs('reports.counter_report') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('reports.counter_report') }}">
+                                <i class="feather-grid me-2"></i> Counter / Rack Report
+                            </a>
+                        </li>
+                     <li class="nxl-item {{ request()->routeIs('reports.items') ? 'active' : '' }}">
+    <a class="nxl-link" href="{{ route('reports.items') }}">
+        <i class="feather-package me-2"></i> Items Report
+    </a>
+</li>
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ ROLES & PERMISSIONS ══ --}}
+                {{-- Top: "view_roles sidebar" | Sub: "view_roles_list sidebar", "create_role sidebar", "view_permissions_list sidebar" --}}
+                @can('view_roles sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-shield"></i></span>
+                        <span class="nxl-mtext">Roles & Permissions</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        @can('view_roles_list sidebar')
+                        <li class="nxl-item {{ request()->routeIs('roles.index') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('roles.index') }}">
+                                <i class="feather-list me-2"></i> Roles List
+                            </a>
+                        </li>
+                        @endcan
+                        @can('create_role sidebar')
+                        <li class="nxl-item {{ request()->routeIs('roles.create') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('roles.create') }}">
+                                <i class="feather-plus-circle me-2"></i> Create Role
+                            </a>
+                        </li>
+                        @endcan
+                        @can('view_permissions_list sidebar')
+                        <li class="nxl-item {{ request()->routeIs('permissions.*') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('permissions.index') }}">
+                                <i class="feather-lock me-2"></i> Permissions
+                            </a>
+                        </li>
+                        @endcan
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ SETTINGS ══ --}}
+                {{-- Permission: "view_settings sidebar" --}}
+                @can('view_settings sidebar')
+                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('settings.*') ? 'active' : '' }}">
+                    <a href="javascript:void(0);" class="nxl-link">
+                        <span class="nxl-micon"><i class="feather-settings"></i></span>
+                        <span class="nxl-mtext">Settings</span>
+                        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+                    </a>
+                    <ul class="nxl-submenu">
+                        <li class="nxl-item {{ request()->routeIs('settings.business') ? 'active' : '' }}">
+                            <a class="nxl-link" href="{{ route('settings.business') }}">
+                                <i class="feather-briefcase me-2"></i> Business Settings
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                @endcan
+
+                {{-- ══ LOGOUT ══ --}}
+                <li class="nxl-item">
+                    <form action="{{ route('logout') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="nxl-link w-100 text-start border-0 bg-transparent text-danger">
+                            <span class="nxl-micon"><i class="feather-log-out"></i></span>
+                            <span class="nxl-mtext">Logout</span>
+                        </button>
+                    </form>
+                </li>
+
+            </ul>
+        </div>
+    </div>
+</nav>
