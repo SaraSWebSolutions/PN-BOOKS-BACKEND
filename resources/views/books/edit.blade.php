@@ -41,10 +41,14 @@
         @csrf
         <input type="hidden" name="book_id" id="book_id_field" value="{{ $book->id }}">
 
-        <div class="card stretch stretch-full">
-            <div class="card-header p-0 border-bottom">
-                <ul class="nav nav-tabs book-wizard-tabs" id="bookTabs">
-                    <li class="nav-item"><button type="button" class="nav-link active" data-tab="tab-basic"><span class="step-num">1</span> Basic Info</button></li>
+       <div class="card stretch stretch-full">
+    <div class="card-header p-0 border-bottom d-flex align-items-stretch book-header-row">
+        <div class="book-title-banner" id="bookTitleBanner">
+            <i class="feather-book-open"></i>
+           <span id="bookTitleBannerText">{{ $book->title ?? 'New Book (untitled)' }}{{ $book->isbn ? ' ('.$book->isbn.')' : '' }}</span>
+        </div>
+        <ul class="nav nav-tabs book-wizard-tabs" id="bookTabs">
+                    <li class="nav-item"><button type="button" class="nav-link active" data-tab="tab-basic"><span class="step-num">1</span> Book Info</button></li>
                     <li class="nav-item"><button type="button" class="nav-link" data-tab="tab-formats"><span class="step-num">2</span> Formats</button></li>
                     <li class="nav-item"><button type="button" class="nav-link" data-tab="tab-files"><span class="step-num">3</span> Files & DRM</button></li>
                     <li class="nav-item"><button type="button" class="nav-link" data-tab="tab-media"><span class="step-num">4</span> Media</button></li>
@@ -80,6 +84,9 @@
     'currency_id'     => optional($c->currency)->id,
     'currency_code'   => optional($c->currency)->code,
     'currency_symbol' => optional($c->currency)->symbol ?: optional($c->currency)->code,
+    'tax_id'          => optional($c->activeTax)->id,
+    'tax_name'        => optional($c->activeTax)->tax_name,
+    'tax_rate'        => optional($c->activeTax)->tax_rate,
 ])) !!}</script>
 
 {{-- ✅ FIX: 'code' was missing here, which broke ebook/audiobook block rendering in Files & DRM tab --}}
@@ -156,12 +163,25 @@ document.addEventListener('DOMContentLoaded', function () {
     buildAllDynamicTabs();
 
     // ── Prefill pricing ──
-    (existing.prices || []).forEach(p => {
-        const input = document.querySelector(`[name="prices[${p.book_format_id}][${p.country_id}][price]"]`);
-        if (input) input.value = p.price;
-        const saleInput = document.querySelector(`[name="prices[${p.book_format_id}][${p.country_id}][sale_price]"]`);
-        if (saleInput && p.sale_price) saleInput.value = p.sale_price;
-    });
+(existing.prices || []).forEach(p => {
+    const input = document.querySelector(`[name="prices[${p.book_format_id}][${p.country_id}][price]"]`);
+    if (input) input.value = p.price;
+    const saleInput = document.querySelector(`[name="prices[${p.book_format_id}][${p.country_id}][sale_price]"]`);
+    if (saleInput && p.sale_price) saleInput.value = p.sale_price;
+
+    // ← NEW
+    const discountInput = document.querySelector(`[name="prices[${p.book_format_id}][${p.country_id}][discount_percent]"]`);
+    if (discountInput && p.discount_percent) discountInput.value = p.discount_percent;
+
+    const applyTaxInput = document.querySelector(`[name="prices[${p.book_format_id}][${p.country_id}][apply_tax]"]`);
+    if (applyTaxInput) applyTaxInput.checked = !!p.tax_id;
+
+    const showDiscountInput = document.querySelector(`[name="prices[${p.book_format_id}][${p.country_id}][is_on_sale]"]`);
+    if (showDiscountInput) showDiscountInput.checked = p.is_on_sale === undefined ? true : !!p.is_on_sale;
+
+    const row = input?.closest('tr[data-has-tax]');
+    if (row) recalcRowFinalPrice(row);
+});
 
     // ── Prefill inventory ──
     (existing.inventory || []).forEach(inv => {
@@ -174,16 +194,26 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ── Show already-uploaded files (browsers block prefilling <input type=file> for security) ──
-    (existing.files || []).forEach(f => {
-        const input = document.querySelector(`[name="files[${f.book_format_id}][${f.file_type}]"]`);
-        if (input && !input.dataset.hinted) {
-            input.dataset.hinted = '1';
-            const hint = document.createElement('div');
-            hint.className = 'form-text fs-11 text-success';
-            hint.innerHTML = `Already uploaded: <a href="/${f.file_path}" target="_blank">${f.file_name}</a> (choose a new file only to replace it)`;
-            input.insertAdjacentElement('afterend', hint);
-        }
-    });
+  // ── Show already-uploaded files + a Remove button (browsers block prefilling <input type=file>) ──
+(existing.files || []).forEach(f => {
+    const input = document.querySelector(`[name="files[${f.book_format_id}][${f.file_type}]"]`);
+    if (input && !input.dataset.hinted) {
+        input.dataset.hinted = '1';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'uploaded-file-hint d-flex align-items-center gap-2 mt-1';
+        wrap.innerHTML = `
+            <span class="fs-11 text-success">
+                Already uploaded: <a href="/${f.file_path}" target="_blank">${f.file_name}</a>
+            </span>
+            <button type="button" class="btn btn-sm btn-light-danger py-0 px-2" title="Remove file"
+                    onclick="removeUploadedFile(${f.id}, this)">
+                <i class="feather-trash-2"></i>
+            </button>
+        `;
+        input.insertAdjacentElement('afterend', wrap);
+    }
+});
 
     // ── Prefill existing chapters ──
     if (existing.chapters && existing.chapters.length) {
@@ -195,12 +225,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 const body = document.getElementById(`chaptersBody-${audiobookFormatId}`);
                 const lastRow = body.lastElementChild;
                 lastRow.querySelector('input[type=text]').value = ch.title;
-                if (ch.audio_file_path) {
-                    const hint = document.createElement('div');
-                    hint.className = 'form-text fs-11 text-success mt-1';
-                    hint.innerHTML = `Uploaded: <a href="/${ch.audio_file_path}" target="_blank">audio file</a>`;
-                    lastRow.querySelector('input[type=file]').insertAdjacentElement('afterend', hint);
-                }
+              if (ch.audio_file_path) {
+    const wrap = document.createElement('div');
+    wrap.className = 'uploaded-file-hint d-flex align-items-center gap-2 mt-1';
+    wrap.innerHTML = `
+        <span class="fs-11 text-success">
+            Uploaded: <a href="/${ch.audio_file_path}" target="_blank">audio file</a>
+        </span>
+        <button type="button" class="btn btn-sm btn-light-danger py-0 px-2" title="Remove audio"
+                onclick="removeChapterAudio(${ch.id}, this)">
+            <i class="feather-trash-2"></i>
+        </button>
+    `;
+    lastRow.querySelector('input[type=file]').insertAdjacentElement('afterend', wrap);
+}
             });
         }
     }

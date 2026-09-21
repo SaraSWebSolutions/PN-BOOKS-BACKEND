@@ -41,7 +41,8 @@
                 <div class="border rounded-3 p-3 mb-3 d-flex gap-3 align-items-start"
                      data-id="{{ $banner->id }}"
                      data-banner="{{ $bannerJson }}">
-                    <img src="{{ $banner->image_url ?? 'https://placehold.co/160x90?text=Banner' }}" style="width:160px;height:90px;object-fit:cover;border-radius:8px;">
+                   <img src="{{ $banner->image_url ?? 'https://placehold.co/160x90?text=Banner' }}"
+     style="width:160px;height:90px;object-fit:cover;border-radius:8px;">
                     <div class="flex-grow-1">
                         <strong>{{ $banner->title_en }}</strong> <span class="text-muted">/ {{ $banner->title_ms }}</span>
                         <div class="text-muted small">{{ $banner->subtitle_en }}</div>
@@ -116,7 +117,7 @@
 
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <button type="button" class="btn btn-light" onclick="hideBannerForm()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveBanner({{ $page->id }})">Save Banner</button>
+                    <button type="button" class="btn btn-primary" onclick="saveBanner()">Save Banner</button>
                 </div>
             </form>
         </div>
@@ -253,7 +254,7 @@
 
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <button type="button" class="btn btn-light" onclick="hideSectionForm()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveSection({{ $page->id }})">Save Section</button>
+                    <button type="button" class="btn btn-primary" onclick="saveSection()">Save Section</button>
                 </div>
             </form>
 
@@ -331,6 +332,22 @@
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
+/* ══════════════ Route-name-based URL templates ══════════════
+   Laravel resolves each route name to a real URL at page-load time.
+   JS then swaps the placeholder for the real numeric ID before firing fetch.
+   Fixes the earlier hardcoded "/admin/website/..." paths that broke
+   the moment the route prefix/group changed. */
+const bannerStoreUrl        = "{{ route('website.banners.store', ['page' => $page->id]) }}";
+const bannerToggleUrlTpl    = "{{ route('website.banners.toggle', ['banner' => '__BANNER_ID__']) }}";
+const bannerDestroyUrlTpl   = "{{ route('website.banners.destroy', ['banner' => '__BANNER_ID__']) }}";
+const bannerReorderUrl      = "{{ route('website.banners.reorder') }}";
+
+const sectionStoreUrl       = "{{ route('website.sections.store', ['page' => $page->id]) }}";
+const sectionDestroyUrlTpl  = "{{ route('website.sections.destroy', ['section' => '__SECTION_ID__']) }}";
+
+const itemStoreUrlTpl       = "{{ route('website.sections.items.store', ['section' => '__SECTION_ID__']) }}";
+const itemDestroyUrlTpl     = "{{ route('website.sections.items.destroy', ['item' => '__ITEM_ID__']) }}";
+
 /* ══════════════ Banners ══════════════ */
 function showBannerForm(){ document.getElementById('bannerForm').classList.remove('d-none'); }
 function hideBannerForm(){
@@ -360,25 +377,43 @@ function editBanner(btn){
     document.getElementById('bannerForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function saveBanner(pageId){
+function saveBanner(){
     const form = document.getElementById('bannerForm');
     const fd = new FormData(form);
 
-    fetch(`/admin/website/${pageId}/banners`, {
+    fetch(bannerStoreUrl, {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': CSRF },
         body: fd
     })
     .then(r => r.json())
-    .then(res => { if (res.status === 'success') location.reload(); else alert(res.message); });
+    .then(res => {
+        if (res.status === 'success') { showToast('success', res.message); setTimeout(() => location.reload(), 800); }
+        else showToast('error', res.message);
+    })
+    .catch(() => showToast('error', 'Something went wrong!'));
+}
+
+function toggleBanner(id){
+    const url = bannerToggleUrlTpl.replace('__BANNER_ID__', id);
+    fetch(url, { method: 'PATCH', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } })
+        .then(r => r.json())
+        .then(res => showToast(res.status === 'success' ? 'success' : 'error', res.message));
 }
 
 function deleteBanner(id){
     if(!confirm('Delete this banner?')) return;
-    fetch(`/admin/website/banners/${id}`, {
+    const url = bannerDestroyUrlTpl.replace('__BANNER_ID__', id);
+    fetch(url, {
         method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': CSRF }
-    }).then(r=>r.json()).then(res => { if(res.status==='success') location.reload(); });
+    })
+    .then(r=>r.json())
+    .then(res => {
+        if(res.status==='success') { showToast('success', res.message); setTimeout(() => location.reload(), 800); }
+        else showToast('error', res.message);
+    })
+    .catch(() => showToast('error', 'Something went wrong!'));
 }
 
 /* ══════════════ Sections ══════════════ */
@@ -408,25 +443,36 @@ function editSection(btn){
     document.getElementById('sectionForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function saveSection(pageId){
+function saveSection(){
     const form = document.getElementById('sectionForm');
     const fd = new FormData(form);
 
-    fetch(`/admin/website/${pageId}/sections`, {
+    fetch(sectionStoreUrl, {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': CSRF },
         body: fd
     })
     .then(r => r.json())
-    .then(res => { if (res.status === 'success') location.reload(); else alert(res.message); });
+    .then(res => {
+        if (res.status === 'success') { showToast('success', res.message); setTimeout(() => location.reload(), 800); }
+        else showToast('error', res.message);
+    })
+    .catch(() => showToast('error', 'Something went wrong!'));
 }
 
 function deleteSection(id){
     if(!confirm('Delete this section and all its items?')) return;
-    fetch(`/admin/website/sections/${id}`, {
+    const url = sectionDestroyUrlTpl.replace('__SECTION_ID__', id);
+    fetch(url, {
         method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': CSRF }
-    }).then(r=>r.json()).then(res => { if(res.status==='success') location.reload(); });
+    })
+    .then(r=>r.json())
+    .then(res => {
+        if(res.status==='success') { showToast('success', res.message); setTimeout(() => location.reload(), 800); }
+        else showToast('error', res.message);
+    })
+    .catch(() => showToast('error', 'Something went wrong!'));
 }
 
 /* ══════════════ Section Items ══════════════ */
@@ -464,26 +510,39 @@ function editItem(btn){
 
 function saveItem(){
     const sectionId = document.getElementById('item_section_id').value;
-    if (!sectionId) { alert('Section not selected.'); return; }
+    if (!sectionId) { showToast('error', 'Section not selected.'); return; }
 
     const form = document.getElementById('itemForm');
     const fd = new FormData(form);
 
-    fetch(`/admin/website/sections/${sectionId}/items`, {
+    const url = itemStoreUrlTpl.replace('__SECTION_ID__', sectionId);
+
+    fetch(url, {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': CSRF },
         body: fd
     })
     .then(r => r.json())
-    .then(res => { if (res.status === 'success') location.reload(); else alert(res.message); });
+    .then(res => {
+        if (res.status === 'success') { showToast('success', res.message); setTimeout(() => location.reload(), 800); }
+        else showToast('error', res.message);
+    })
+    .catch(() => showToast('error', 'Something went wrong!'));
 }
 
 function deleteItem(id){
     if(!confirm('Delete this item?')) return;
-    fetch(`/admin/website/section-items/${id}`, {
+    const url = itemDestroyUrlTpl.replace('__ITEM_ID__', id);
+    fetch(url, {
         method: 'DELETE',
         headers: { 'X-CSRF-TOKEN': CSRF }
-    }).then(r=>r.json()).then(res => { if(res.status==='success') location.reload(); });
+    })
+    .then(r=>r.json())
+    .then(res => {
+        if(res.status==='success') { showToast('success', res.message); setTimeout(() => location.reload(), 800); }
+        else showToast('error', res.message);
+    })
+    .catch(() => showToast('error', 'Something went wrong!'));
 }
 
 /* ══════════════ Toast ══════════════ */

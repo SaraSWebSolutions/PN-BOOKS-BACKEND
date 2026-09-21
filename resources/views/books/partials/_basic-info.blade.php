@@ -3,7 +3,7 @@
         <div class="col-md-8">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Book Title <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
                     <input type="text" name="title" id="title_field" required class="form-control" value="{{ old('title', $book->title ?? '') }}" placeholder="e.g. Ponniyin Selvan - Part 1">
                 </div>
                 <div class="col-md-6">
@@ -57,7 +57,7 @@
 
                 <div class="col-md-6">
                     <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                        <span>Category <span class="text-danger">*</span></span>
+                        <span>Genre <span class="text-danger">*</span></span>
                         <button type="button" class="btn btn-sm btn-quick-add" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCategory" title="Add new category">
                             <i class="feather-plus"></i>
                         </button>
@@ -72,7 +72,7 @@
 
                 <div class="col-md-6">
                     <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                        <span>Subcategory</span>
+                        <span>Subgenre</span>
                         <button type="button" class="btn btn-sm btn-quick-add" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSubcategory" title="Add new subcategory">
                             <i class="feather-plus"></i>
                         </button>

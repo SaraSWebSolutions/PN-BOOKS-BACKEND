@@ -70,6 +70,22 @@
                     <span class="text-muted fs-12">entries</span>
                 </div>
 
+                {{-- ✅ NEW — Category filter (Select2) --}}
+                <select id="categoryFilter" class="form-select form-select-sm select2-filter" data-placeholder="All Categories" style="width:170px;">
+                    <option value=""></option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat->id }}">{{ $cat->name_en }}</option>
+                    @endforeach
+                </select>
+
+                {{-- ✅ NEW — Author filter (Select2) --}}
+                <select id="authorFilter" class="form-select form-select-sm select2-filter" data-placeholder="All Authors" style="width:170px;">
+                    <option value=""></option>
+                    @foreach($authors as $author)
+                        <option value="{{ $author->id }}">{{ $author->pen_name ?: optional($author->user)->name ?? 'Unnamed Author' }}</option>
+                    @endforeach
+                </select>
+
                 <select id="typeFilter" class="form-select form-select-sm" style="width:150px;">
                     <option value="">All Types</option>
                     <option value="physical">Physical</option>
@@ -111,11 +127,20 @@
                         @forelse($books as $book)
                         @php
                             $formatCodes = $book->formats->pluck('code')->toArray();
-                            $formatNames = $book->formats->pluck('name')->join(', ');
+
+                            // ✅ Map each format to an icon + color so Physical / eBook / Audiobook
+                            // are visually distinct at a glance in the Type column.
+                            $formatIconMap = [
+                                'physical'  => ['icon' => 'feather-book',        'bg' => 'bg-light-primary', 'color' => 'text-primary'],
+                                'ebook'     => ['icon' => 'feather-tablet',      'bg' => 'bg-light-info',    'color' => 'text-info'],
+                                'audiobook' => ['icon' => 'feather-headphones', 'bg' => 'bg-light-warning', 'color' => 'text-warning'],
+                            ];
                         @endphp
                         <tr class="book-row" id="book-row-{{ $book->id }}"
                             data-type="{{ implode(' ', $formatCodes) }}"
-                            data-status="{{ $book->status }}">
+                            data-status="{{ $book->status }}"
+                            data-category-id="{{ $book->category_id }}"
+                            data-author-id="{{ $book->author_id }}">
                             <td class="text-muted fs-12 row-index">{{ $loop->iteration }}</td>
                             <td>
                                 @if($book->cover_image)
@@ -138,11 +163,23 @@
                             </td>
                             <td class="fs-12">{{ $book->author->pen_name ?? optional($book->author->user)->name ?? '—' }}</td>
                             <td>
-                                @if($formatNames)
-                                    <span class="badge bg-light-primary text-primary">{{ $formatNames }}</span>
-                                @else
+                                @forelse($book->formats as $format)
+                                    @php
+                                        $codeOrName = strtolower($format->code ?: $format->name);
+                                        $meta = $formatIconMap[$format->code] ?? [
+                                            'icon'  => str_contains($codeOrName, 'audio') ? 'feather-headphones'
+                                                       : (str_contains($codeOrName, 'ebook') || str_contains($codeOrName, 'e-book') || str_contains($codeOrName, 'e_book') ? 'feather-tablet'
+                                                       : 'feather-book'),
+                                            'bg'    => 'bg-light-secondary',
+                                            'color' => 'text-secondary',
+                                        ];
+                                    @endphp
+                                    <span class="badge {{ $meta['bg'] }} {{ $meta['color'] }} d-inline-flex align-items-center gap-1 mb-1" title="{{ $format->name }}">
+                                        <i class="{{ $meta['icon'] }} fs-11"></i>{{ $format->name }}
+                                    </span>
+                                @empty
                                     <span class="text-muted fs-12">—</span>
-                                @endif
+                                @endforelse
                             </td>
                             <td class="text-center">
                                 <span class="badge
@@ -194,6 +231,7 @@
 @endsection
 
 @push('styles')
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
 <style>
 .ajax-toast{position:fixed;top:20px;right:20px;z-index:9999;min-width:300px;max-width:400px;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .4s cubic-bezier(.34,1.56,.64,1);}
 .ajax-toast.show{transform:translateX(0);}
@@ -212,6 +250,48 @@
     border-color:#7b5cf0;
     box-shadow:0 0 0 3px rgba(123,92,240,.12);
 }
+
+/* ── Select2 styling for Category / Author filters — matches purple accent used elsewhere ── */
+.select2-filter + .select2-container{ width:170px !important; }
+.select2-container--default .select2-selection--single{
+    height:31px;
+    border:1px solid #e2e5ec;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    padding:0 8px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered{
+    line-height:29px;
+    font-size:13px;
+    padding-left:0;
+    color:#4f5b76;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow{
+    height:29px;
+}
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single{
+    border-color:#7b5cf0;
+    box-shadow:0 0 0 3px rgba(123,92,240,.12);
+}
+.select2-dropdown{
+    border-color:#e2e5ec;
+    border-radius:8px;
+    overflow:hidden;
+}
+.select2-results__option--highlighted[aria-selected]{
+    background-color:#f2eeff !important;
+    color:#7b5cf0 !important;
+}
+.select2-search--dropdown .select2-search__field{
+    border-radius:6px;
+    border:1px solid #e2e5ec;
+}
+
+/* ── Format badges (Physical / eBook / Audiobook) ── */
+.bg-light-secondary{ background:#eef0f4 !important; }
+.text-secondary{ color:#6b7280 !important; }
 
 .custom-pagination ul{
     list-style:none;
@@ -258,6 +338,8 @@
 @endpush
 
 @push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
@@ -267,19 +349,30 @@ const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 const bookFeaturedUrlTemplate = "{{ route('books.featured', ['book' => '__BOOK_ID__']) }}";
 const bookDestroyUrlTemplate  = "{{ route('books.destroy',  ['book' => '__BOOK_ID__']) }}";
 
+/* ── Init Select2 on the filter dropdowns ── */
+$(function(){
+    $('.select2-filter').select2({
+        width: 'resolve',
+        placeholder: function(){ return $(this).data('placeholder'); },
+        allowClear: true
+    });
+});
+
 /* ========================================================
    Front-end pagination — identical pattern to Categories.
    Works on rows already rendered by Blade + respects the
-   Type / Status filters and the search box.
+   Category / Author / Type / Status filters and the search box.
    ======================================================== */
 (function () {
-    const rowSelector   = '.book-row';
-    const perPageSelect = document.getElementById('perPageSelect');
-    const searchInput   = document.getElementById('searchInput');
-    const typeFilter    = document.getElementById('typeFilter');
-    const statusFilter  = document.getElementById('statusFilter');
-    const entriesInfo   = document.getElementById('entriesInfo');
-    const paginationBox = document.getElementById('paginationContainer');
+    const rowSelector    = '.book-row';
+    const perPageSelect  = document.getElementById('perPageSelect');
+    const searchInput    = document.getElementById('searchInput');
+    const typeFilter     = document.getElementById('typeFilter');
+    const statusFilter   = document.getElementById('statusFilter');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const authorFilter   = document.getElementById('authorFilter');
+    const entriesInfo    = document.getElementById('entriesInfo');
+    const paginationBox  = document.getElementById('paginationContainer');
 
     let currentPage = 1;
     let perPage = 10;
@@ -288,12 +381,16 @@ const bookDestroyUrlTemplate  = "{{ route('books.destroy',  ['book' => '__BOOK_I
         const q = (searchInput.value || '').toLowerCase().trim();
         const type = typeFilter.value;
         const status = statusFilter.value;
+        const category = categoryFilter.value;
+        const author = authorFilter.value;
 
         const mq = !q || row.textContent.toLowerCase().includes(q);
         const mt = !type || (row.dataset.type || '').includes(type);
         const ms = !status || row.dataset.status === status;
+        const mc = !category || row.dataset.categoryId === category;
+        const ma = !author || row.dataset.authorId === author;
 
-        return mq && mt && ms;
+        return mq && mt && ms && mc && ma;
     }
 
     function render() {
@@ -371,6 +468,10 @@ const bookDestroyUrlTemplate  = "{{ route('books.destroy',  ['book' => '__BOOK_I
     searchInput.addEventListener('input', function () { currentPage = 1; render(); });
     typeFilter.addEventListener('change', function () { currentPage = 1; render(); });
     statusFilter.addEventListener('change', function () { currentPage = 1; render(); });
+
+    // Select2 fires change through jQuery — use jQuery's .on() for these two
+    $('#categoryFilter').on('change', function () { currentPage = 1; render(); });
+    $('#authorFilter').on('change', function () { currentPage = 1; render(); });
 
     window.__bookPaginationRender = render;
 

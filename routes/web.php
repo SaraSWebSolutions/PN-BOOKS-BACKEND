@@ -36,7 +36,10 @@ use App\Http\Controllers\QuickCreateController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WebsiteContentController;
-
+use App\Http\Controllers\OfferController;
+use App\Http\Controllers\FaqController;
+use App\Http\Controllers\SupportTicketController;
+use App\Http\Controllers\SupportSubjectController;
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -198,6 +201,16 @@ Route::prefix('book-formats')->name('book-formats.')->group(function () {
     Route::delete('/{bookFormat}', [BookFormatController::class, 'destroy'])->name('destroy');
 });
 
+
+Route::prefix('offers')->name('offers.')->group(function () {
+    Route::get('/',                  [OfferController::class, 'index'])->name('index');
+    Route::post('/',                 [OfferController::class, 'store'])->name('store');
+    Route::put('/{offer}',           [OfferController::class, 'update'])->name('update');
+    Route::patch('/{offer}/toggle',  [OfferController::class, 'toggleStatus'])->name('toggle');
+    Route::delete('/{offer}',        [OfferController::class, 'destroy'])->name('destroy');
+    Route::get('/books/search',      [OfferController::class, 'searchBooks'])->name('books.search');
+});
+
  Route::get('/countries', [CountryController::class, 'index'])->name('countries.index');
     Route::post('/countries', [CountryController::class, 'store'])->name('countries.store');
     Route::put('/countries/{country}', [CountryController::class, 'update'])->name('countries.update');
@@ -228,7 +241,13 @@ Route::delete('/section-items/{item}', [WebsiteContentController::class, 'destro
     Route::delete('/sections/{section}',     [WebsiteContentController::class, 'destroySection'])->name('sections.destroy');
 });
 
-
+Route::get('website-media/{folder}/{filename}', [WebsiteContentController::class, 'serveImage'])
+    ->where('folder', 'banners|sections|section-items')
+    ->name('website.image');
+// Serves category images stored at project-root uploads/categories (outside public/)
+// Serves category images stored at project-root uploads/categories (outside public/)
+Route::get('/uploads/categories/{filename}', [CategoryController::class, 'serveImage'])
+    ->name('categories.image');
 Route::get('books/isbn-check/{isbn}', [App\Http\Controllers\BookController::class, 'checkIsbn'])
     ->name('books.isbn.check');
      
@@ -247,12 +266,31 @@ Route::prefix('languages')->name('languages.')->group(function () {
     return response()->file($path);
 })->where('filename', '.*')->name('uploads.serve');
 
+Route::delete('/book-files/{bookFile}', [BookController::class, 'destroyFile'])
+    ->name('books.files.destroy');
+
+Route::delete('/book-chapters/{chapter}/audio', [BookController::class, 'destroyChapterAudio'])
+    ->name('books.chapters.audio.destroy');
 
 
 Route::prefix('orders')->name('orders.')->group(function () {
     Route::get('/', [OrderController::class, 'index'])->name('index');
     Route::get('/{order}', [OrderController::class, 'show'])->name('show');
     Route::patch('/{order}/status', [OrderController::class, 'updateStatus'])->name('updateStatus');
+
+    // ── new routes ──
+    Route::patch('/{order}/meta', [OrderController::class, 'updateMeta'])->name('updateMeta');
+
+    Route::patch('/{order}/address/{type}', [OrderController::class, 'updateAddress'])
+        ->name('updateAddress')
+        ->where('type', 'shipping|billing');
+
+    Route::post('/{order}/items', [OrderController::class, 'addItem'])->name('items.add');
+    Route::patch('/{order}/items/{item}', [OrderController::class, 'updateItemQty'])->name('items.update');
+    Route::delete('/{order}/items/{item}', [OrderController::class, 'removeItem'])->name('items.remove');
+
+    Route::get('/books/search', [OrderController::class, 'searchBooks'])->name('books.search');
+    Route::get('/books/{book}/formats', [OrderController::class, 'bookFormats'])->name('books.formats');
 });
 
 
@@ -260,14 +298,28 @@ Route::prefix('orders')->name('orders.')->group(function () {
 
 
 
-    
+     Route::get('/faqs', [FaqController::class, 'index'])->name('faqs.index');
+    Route::post('/faqs', [FaqController::class, 'store'])->name('faqs.store');
+    Route::match(['put', 'post'], '/faqs/{faq}', [FaqController::class, 'update'])->name('faqs.update');
+    Route::patch('/faqs/{faq}/toggle', [FaqController::class, 'toggleStatus'])->name('faqs.toggle');
+    Route::delete('/faqs/{faq}', [FaqController::class, 'destroy'])->name('faqs.destroy');
+
+    // Support Tickets
+    Route::get('/support-tickets', [SupportTicketController::class, 'index'])->name('support-tickets.index');
+    Route::match(['patch', 'post'], '/support-tickets/{support_ticket}/reply', [SupportTicketController::class, 'reply'])->name('support-tickets.reply');
+    Route::patch('/support-tickets/{support_ticket}/status', [SupportTicketController::class, 'updateStatus'])->name('support-tickets.status');
+    Route::delete('/support-tickets/{support_ticket}', [SupportTicketController::class, 'destroy'])->name('support-tickets.destroy');
 
 
 
 
 
 
-
+ Route::get('/support-subjects', [SupportSubjectController::class, 'index'])->name('support-subjects.index');
+    Route::post('/support-subjects', [SupportSubjectController::class, 'store'])->name('support-subjects.store');
+    Route::match(['put','post'], '/support-subjects/{support_subject}', [SupportSubjectController::class, 'update'])->name('support-subjects.update');
+    Route::patch('/support-subjects/{support_subject}/toggle', [SupportSubjectController::class, 'toggleStatus'])->name('support-subjects.toggle');
+    Route::delete('/support-subjects/{support_subject}', [SupportSubjectController::class, 'destroy'])->name('support-subjects.destroy');
 
 
 

@@ -25,11 +25,15 @@ class User extends Authenticatable
         'department_id',
         'date_of_birth',
         'date_of_joining',
+        'otp',
+        'otp_expires_at',
+        'email_verified_at', // add this
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'otp',
     ];
 
     protected $casts = [
@@ -37,6 +41,7 @@ class User extends Authenticatable
         'date_of_birth'     => 'date',
         'date_of_joining'   => 'date',
         'password'          => 'hashed',
+        'otp_expires_at'    => 'datetime', // add this
     ];
 
     // avatar_url is the single source of truth the header/profile UI reads from.
@@ -85,4 +90,14 @@ class User extends Authenticatable
     {
         return $query->where('status', 'active');
     }
+
+    public function wishlists()
+{
+    return $this->hasMany(Wishlist::class);
+}
+
+public function wishlistBooks()
+{
+    return $this->belongsToMany(Book::class, 'wishlists')->withTimestamps();
+}
 }

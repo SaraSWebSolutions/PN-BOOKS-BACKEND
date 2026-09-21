@@ -82,10 +82,10 @@ class HomeApiController extends Controller
 
         return [
             'published_books'   => $publishedBooksCount,
-            'years_of_heritage'  => config('site_stats.years_of_heritage'),
+            'years_of_heritage'  => 10,
             'ebooks'             => $ebooksCount,
             'authors'            => $authorsCount,
-            'branch_libraries'   => config('site_stats.branch_libraries'),
+            'branch_libraries'   => 20,
         ];
     }
 

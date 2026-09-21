@@ -42,9 +42,13 @@ class Country extends Model
     {
         return $query->orderBy('name', 'asc');
     }
-    public function taxes()
+//     public function taxes()
+// {
+//     return $this->hasMany(Tax::class);
+// }
+public function activeTax()
 {
-    return $this->hasMany(Tax::class);
+    return $this->hasOne(Tax::class)->where('status', 1);
 }
 
 public function currency()

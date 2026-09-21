@@ -42,39 +42,42 @@ class CartApiController extends Controller
         ]);
     }
 
-    public function addItem(Request $request)
-    {
-        $data = $request->validate([
-            'book_id'        => 'required|exists:books,id',
-            'book_format_id' => 'required|exists:book_formats,id',
-            'quantity'       => 'nullable|integer|min:1',
-        ]);
+   public function addItem(Request $request)
+{
+    $data = $request->validate([
+        'book_id'        => 'required|exists:books,id',
+        'book_format_id' => 'required|exists:book_formats,id',
+        'quantity'       => 'nullable|integer|min:1',
+    ]);
 
-        $book = Book::findOrFail($data['book_id']);
-        $price = $book->prices()
-            ->where('book_format_id', $data['book_format_id'])
-            ->where('is_active', true)
-            ->first();
+    $book = Book::findOrFail($data['book_id']);
+    $price = $book->prices()
+        ->where('book_format_id', $data['book_format_id'])
+        ->where('is_active', true)
+        ->first();
 
-        if (! $price) {
-            return response()->json(['status' => 'error', 'message' => 'This format has no active price set.'], 422);
-        }
-
-        $cart = $this->currentCart($request);
-
-        $item = CartItem::firstOrNew([
-            'cart_id'        => $cart->id,
-            'book_id'        => $data['book_id'],
-            'book_format_id' => $data['book_format_id'],
-        ]);
-
-        $item->quantity   = ($item->exists ? $item->quantity : 0) + ($data['quantity'] ?? 1);
-        $item->unit_price = $price->sale_price ?? $price->price;
-        $item->currency_id = $price->currency_id;
-        $item->save();
-
-        return response()->json(['status' => 'success', 'message' => 'Added to cart', 'item_id' => $item->id]);
+    if (! $price) {
+        return response()->json(['status' => 'error', 'message' => 'This format has no active price set.'], 422);
     }
+
+    $cart = $this->currentCart($request);
+
+    $item = CartItem::firstOrNew([
+        'cart_id'        => $cart->id,
+        'book_id'        => $data['book_id'],
+        'book_format_id' => $data['book_format_id'],
+    ]);
+
+    $item->quantity    = ($item->exists ? $item->quantity : 0) + ($data['quantity'] ?? 1);
+    // ✅ FIX: use effective_price, which respects the is_on_sale ("Show") toggle.
+    // Previously `$price->sale_price ?? $price->price` charged the sale price
+    // even when the admin had "Show" switched OFF for that country/row.
+    $item->unit_price  = $price->effective_price;
+    $item->currency_id = $price->currency_id;
+    $item->save();
+
+    return response()->json(['status' => 'success', 'message' => 'Added to cart', 'item_id' => $item->id]);
+}
 
     public function updateItem(Request $request, CartItem $item)
     {

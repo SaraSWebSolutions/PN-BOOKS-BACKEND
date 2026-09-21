@@ -24,7 +24,7 @@
                 <li class="nxl-item nxl-hasmenu {{ request()->routeIs('books.*') ? 'active' : '' }}">
                     <a href="javascript:void(0);" class="nxl-link">
                         <span class="nxl-micon"><i class="feather-book-open"></i></span>
-                        <span class="nxl-mtext">Books</span>
+                        <span class="nxl-mtext">Book Catalog</span>
                         <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
                     </a>
                     <ul class="nxl-submenu">
@@ -63,13 +63,13 @@
                 <li class="nxl-item nxl-hasmenu {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') ? 'active' : '' }}">
                     <a href="javascript:void(0);" class="nxl-link">
                         <span class="nxl-micon"><i class="feather-grid"></i></span>
-                        <span class="nxl-mtext">Categories</span>
+                        <span class="nxl-mtext">Genres</span>
                         <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
                     </a>
                     <ul class="nxl-submenu">
                         <li class="nxl-item {{ request()->routeIs('categories.index') ? 'active' : '' }}">
                             <a class="nxl-link" href="{{ route('categories.index') }}">
-                                <i class="feather-list me-2"></i> Categories
+                                <i class="feather-list me-2"></i> Genres
                             </a>
                         </li>
                         <li class="nxl-item {{ request()->routeIs('subcategories.index') ? 'active' : '' }}">
@@ -84,7 +84,7 @@
                 <li class="nxl-item">
                     <a class="nxl-link {{ request()->routeIs('series.index') ? 'active' : '' }}" href="{{ route('series.index') }}">
                         <span class="nxl-micon"><i class="feather-bookmark"></i></span>
-                        <span class="nxl-mtext">Series</span>
+                        <span class="nxl-mtext">Series Catalog</span>
                     </a>
                 </li>
 
@@ -148,6 +148,14 @@
                         <span class="nxl-mtext">Countries</span>
                     </a>
                 </li>
+
+                {{-- Offers --}}
+<li class="nxl-item">
+    <a class="nxl-link {{ request()->routeIs('offers.index') ? 'active' : '' }}" href="{{ route('offers.index') }}">
+        <span class="nxl-micon"><i class="feather-tag"></i></span>
+        <span class="nxl-mtext">Promotions</span>
+    </a>
+</li>
 
                 {{-- Languages --}}
                 <li class="nxl-item">
@@ -287,7 +295,30 @@
                         </li>
                     </ul>
                 </li>
-
+               <li class="nxl-item nxl-hasmenu {{ request()->routeIs('faqs.*') || request()->routeIs('support-tickets.*') || request()->routeIs('support-subjects.*') ? 'active' : '' }}">
+    <a href="javascript:void(0);" class="nxl-link">
+        <span class="nxl-micon"><i class="feather-life-buoy"></i></span>
+        <span class="nxl-mtext">Website Support</span>
+        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
+    </a>
+    <ul class="nxl-submenu">
+        <li class="nxl-item {{ request()->routeIs('faqs.index') ? 'active' : '' }}">
+            <a class="nxl-link" href="{{ route('faqs.index') }}">
+                <i class="feather-help-circle me-2"></i> FAQs
+            </a>
+        </li>
+        <li class="nxl-item {{ request()->routeIs('support-subjects.index') ? 'active' : '' }}">
+            <a class="nxl-link" href="{{ route('support-subjects.index') }}">
+                <i class="feather-tag me-2"></i> Support Subjects
+            </a>
+        </li>
+        <li class="nxl-item {{ request()->routeIs('support-tickets.index') ? 'active' : '' }}">
+            <a class="nxl-link" href="{{ route('support-tickets.index') }}">
+                <i class="feather-headphones me-2"></i> Support Tickets
+            </a>
+        </li>
+    </ul>
+</li>
                 <li class="nxl-item nxl-hasmenu {{ request()->routeIs('website.*') ? 'active' : '' }}">
     <a href="javascript:void(0);" class="nxl-link">
         <span class="nxl-micon"><i class="feather-layout"></i></span>
@@ -320,6 +351,8 @@
                 </li>
 
             </ul>
+
+
         </div>
     </div>
 </nav>

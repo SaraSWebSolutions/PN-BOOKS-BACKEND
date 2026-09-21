@@ -14,7 +14,7 @@ class Order extends Model
     protected $fillable = [
         'order_number', 'user_id', 'currency_id', 'status', 'payment_status',
         'payment_method', 'subtotal', 'discount_amount', 'shipping_amount',
-        'tax_amount', 'total_amount', 'notes', 'placed_at',
+        'tax_amount', 'total_amount', 'notes', 'placed_at','tracking_number', 'shipping_carrier', 'shipped_at', // NEW
     ];
 
     protected $casts = [
@@ -24,6 +24,7 @@ class Order extends Model
         'shipping_amount'  => 'decimal:2',
         'tax_amount'       => 'decimal:2',
         'total_amount'     => 'decimal:2',
+         'shipped_at'       => 'datetime',
     ];
 
     protected static function booted()
@@ -83,4 +84,7 @@ class Order extends Model
 {
     return $this->belongsTo(Currency::class);
 }
+
+
+
 }

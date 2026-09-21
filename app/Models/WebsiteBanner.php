@@ -19,13 +19,17 @@ class WebsiteBanner extends Model
     }
 
     // ✅ same idea as $book->cover_image_url in your Book model
-    public function getImageUrlAttribute()
-    {
-        return $this->image ? asset($this->image) : null;
-    }
+  public function getImageUrlAttribute()
+{
+    return $this->image
+        ? route('website.image', ['folder' => 'banners', 'filename' => basename($this->image)])
+        : null;
+}
 
-    public function getMobileImageUrlAttribute()
-    {
-        return $this->mobile_image ? asset($this->mobile_image) : null;
-    }
+public function getMobileImageUrlAttribute()
+{
+    return $this->mobile_image
+        ? route('website.image', ['folder' => 'banners', 'filename' => basename($this->mobile_image)])
+        : null;
+}
 }

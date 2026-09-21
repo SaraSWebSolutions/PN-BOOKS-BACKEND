@@ -172,7 +172,7 @@
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     @if($cat->image)
-                                        <img src="{{ asset($cat->image) }}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
+                                        <img src="{{ $cat->image_url }}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">
                                     @else
                                         <div class="d-flex align-items-center justify-content-center rounded-3"
                                              style="width:36px;height:36px;background:rgba(99,102,241,.1);">

@@ -18,7 +18,8 @@ const bookMediaUrlTemplate             = "{{ route('books.media.store', ['book' 
 const bookRelatedUrlTemplate           = "{{ route('books.related.store', ['book' => '__BOOK_ID__']) }}";
 const galleryDeleteUrlTemplate         = "{{ route('books.gallery.delete', ['image' => '__IMAGE_ID__']) }}";
 const bookSearchSelectUrl              = "{{ route('books.searchSelect') }}";
-
+const bookFileDeleteUrlTemplate     = "{{ route('books.files.destroy', ['bookFile' => '__FILE_ID__']) }}";
+const chapterAudioDeleteUrlTemplate = "{{ route('books.chapters.audio.destroy', ['chapter' => '__CHAPTER_ID__']) }}";
 /* Wizard tab-save endpoints — 'basic' has 2 routes (with/without book id), others always need book id */
 const bookTabRouteTemplates = {
     basic: {
@@ -579,15 +580,33 @@ function removeChapterRow(i, formatId){
 }
 
 /* ══════════════════════════════════════════════════════════════════════
- * PRICING TABLE — currency-aware.
- * Each row shows the country's mapped currency as a prefix on the price
- * inputs (e.g. "RM 0.00", "$ 0.00", "₹ 0.00") and carries a hidden
- * currency_id field so BookPrice.currency_id actually gets saved instead
- * of staying null.
+ * PRICING TABLE — currency + tax aware, with a LIVE "Final Price" column
+ * AND a Discount % field that stays in sync with Sale Price both ways.
+ *
+ * Each row shows:
+ *  - the country's mapped currency as a prefix on Price / Sale Price
+ *    (e.g. "RM 0.00", "$ 0.00", "₹ 0.00") + a hidden currency_id field
+ *  - a Discount % input — typing here auto-fills Sale Price, and typing
+ *    a Sale Price directly auto-fills Discount % (see the sync functions
+ *    below buildPricingTable). // ← NEW
+ *  - a "Show" toggle (maps to is_on_sale) that controls whether the
+ *    discount is actually surfaced on the storefront / reflected in the
+ *    Final Price preview. // ← NEW
+ *  - the country's active tax name/rate (e.g. "SST (6%)") or "No tax set"
+ *  - an "Apply" toggle switch (only shown when the country actually has
+ *    an active tax) so the admin can exempt a specific book/country
+ *  - a live-computed "Final Price" column that instantly recalculates
+ *    whenever Price, Sale Price, Discount %, or either toggle changes —
+ *    no save/reload needed. Sale price (if filled and "Show" is on)
+ *    always wins over regular price, matching what the storefront will
+ *    actually charge.
  * ══════════════════════════════════════════════════════════════════════ */
 function buildPricingTable(){
     const checked = getCheckedFormats(), container=document.getElementById('pricingContainer');
-    if(checked.length===0){ container.innerHTML='<div class="text-center text-muted py-4"><i class="feather-alert-circle fs-30 d-block mb-2 opacity-50"></i>Go back to <strong>Formats</strong> and select at least one format first.</div>'; return; }
+    if(checked.length===0){
+        container.innerHTML='<div class="text-center text-muted py-4"><i class="feather-alert-circle fs-30 d-block mb-2 opacity-50"></i>Go back to <strong>Formats</strong> and select at least one format first.</div>';
+        return;
+    }
     container.innerHTML='';
     checked.forEach(formatId=>{
         const format=FORMATS.find(f=>f.id===formatId); if(!format) return;
@@ -598,7 +617,20 @@ function buildPricingTable(){
                 ? `<input type="hidden" name="prices[${formatId}][${country.id}][currency_id]" value="${country.currency_id}">`
                 : '';
 
-            rows+=`<tr>
+            const hasTax = !!country.tax_id;
+            const taxRate = hasTax ? parseFloat(country.tax_rate) : 0;
+            const taxLabel = hasTax
+                ? `${country.tax_name} (${taxRate}%)`
+                : `<span class="text-muted">No tax set</span>`;
+
+            const taxIdField = hasTax
+                ? `<input type="hidden" name="prices[${formatId}][${country.id}][tax_id]" value="${country.tax_id}">
+                   <input type="hidden" name="prices[${formatId}][${country.id}][tax_rate]" value="${taxRate}">`
+                : '';
+
+            const rowId = `price-row-${formatId}-${country.id}`;
+
+            rows+=`<tr id="${rowId}" data-tax-rate="${taxRate}" data-has-tax="${hasTax ? 1 : 0}">
                 <td>
                     ${country.name}
                     ${country.currency_code ? `<span class="badge bg-light text-muted fw-normal ms-1">${country.currency_code}</span>` : ''}
@@ -606,14 +638,40 @@ function buildPricingTable(){
                 <td>
                     <div class="input-group input-group-sm">
                         ${symbol ? `<span class="input-group-text">${symbol}</span>` : ''}
-                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" name="prices[${formatId}][${country.id}][price]" placeholder="0.00">
+                        <input type="number" step="0.01" min="0" class="form-control form-control-sm price-input" name="prices[${formatId}][${country.id}][price]" placeholder="0.00">
                     </div>
                 </td>
                 <td>
                     <div class="input-group input-group-sm">
                         ${symbol ? `<span class="input-group-text">${symbol}</span>` : ''}
-                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" name="prices[${formatId}][${country.id}][sale_price]" placeholder="Optional">
+                        <input type="number" step="0.01" min="0" class="form-control form-control-sm sale-price-input" name="prices[${formatId}][${country.id}][sale_price]" placeholder="Optional">
                     </div>
+                </td>
+               <td class="d-none">
+    <div class="input-group input-group-sm">
+        <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm discount-percent-input" name="prices[${formatId}][${country.id}][discount_percent]" placeholder="0">
+        <span class="input-group-text">%</span>
+    </div>
+</td>
+                <td class="text-center">
+                    <div class="form-check form-switch d-flex justify-content-center">
+                        <input class="form-check-input is-on-sale-toggle" type="checkbox" name="prices[${formatId}][${country.id}][is_on_sale]" value="1" title="Show this discount on the storefront">
+                    </div>
+                </td>
+                <td class="fs-12">
+                    ${taxLabel}
+                    ${taxIdField}
+                </td>
+                <td class="text-center">
+                    ${hasTax
+                        ? `<div class="form-check form-switch d-flex justify-content-center">
+                             <input class="form-check-input apply-tax-toggle" type="checkbox" name="prices[${formatId}][${country.id}][apply_tax]" value="1" checked>
+                           </div>`
+                        : '—'
+                    }
+                </td>
+                <td class="fs-12 fw-semibold text-end final-price-cell">
+                    ${symbol} <span class="final-price-value">0.00</span>
                 </td>
                 <td class="d-none">${currencyIdField}</td>
             </tr>`;
@@ -622,12 +680,148 @@ function buildPricingTable(){
         <div class="pricing-format-block">
             <div class="pricing-format-header"><i class="${format.icon}"></i> ${format.name}</div>
             <div class="table-responsive"><table class="table table-sm mb-0">
-                <thead><tr><th style="width:40%;">Country</th><th>Price</th><th>Sale Price</th><th class="d-none"></th></tr></thead>
+                <thead><tr>
+                    <th style="width:20%;">Country</th>
+                    <th>Price</th>
+                    <th>Sale Price</th>
+                    <th style="width:110px;" class="d-none">Discount %</th>
+                    <th style="width:70px;" class="text-center">Show</th>
+                    <th>Tax</th>
+                    <th style="width:70px;" class="text-center">Apply</th>
+                    <th style="width:13%;" class="text-end" title="What the customer actually pays: Sale Price (or Price if no Sale Price) plus tax, only when Apply is on and Show is on. Preview only.">Final Price <i class="feather-info fs-11 text-muted"></i></th>
+                    <th class="d-none"></th>
+                </tr></thead>
                 <tbody>${rows}</tbody>
             </table></div>
         </div>`);
     });
+
+    // Compute every row's final price once right after building (covers Edit-page prefill too)
+    document.querySelectorAll('#pricingContainer tr[data-has-tax]').forEach(recalcRowFinalPrice);
 }
+
+/* ── Recalculate ONE pricing row's "Final Price" column ──
+   Rule: sale price (if filled AND "Show" is on AND it's actually lower
+   than price) wins over regular price, since that's what the storefront
+   will actually charge. Tax is only added if the country has an active
+   tax AND the Apply toggle for that row is on. // ← UPDATED to respect Show toggle */
+/* ── Half-up rounding helper — mirrors PHP's PHP_ROUND_HALF_UP exactly ── */
+function roundHalfUp(num, decimals = 2){
+    const factor = Math.pow(10, decimals);
+    return Math.round((num + Number.EPSILON) * factor) / factor;
+}
+
+function recalcRowFinalPrice(row){
+    const priceInput     = row.querySelector('.price-input');
+    const salePriceInput = row.querySelector('.sale-price-input');
+    const applyToggle    = row.querySelector('.apply-tax-toggle');
+    const showToggle     = row.querySelector('.is-on-sale-toggle');
+    const finalCell      = row.querySelector('.final-price-value');
+    if (!finalCell) return;
+
+    const price     = roundHalfUp(parseFloat(priceInput?.value) || 0);
+    const salePrice = roundHalfUp(parseFloat(salePriceInput?.value) || 0);
+    const showSale  = showToggle ? showToggle.checked : false;
+
+    const base = (showSale && salePrice > 0 && salePrice < price) ? salePrice : price;
+
+    const hasTax   = row.dataset.hasTax === '1';
+    const taxRate  = parseFloat(row.dataset.taxRate) || 0;
+    const applyTax = applyToggle ? applyToggle.checked : false;
+
+    // ── Exact final price (same formula the backend uses) ──
+    let finalPrice = base;
+    if (hasTax && applyTax && taxRate > 0){
+        finalPrice = base + (base * taxRate / 100);
+    }
+    finalPrice = roundHalfUp(finalPrice, 2);
+
+    // ── Rounded to nearest whole number (matches final_price_rounded in DB) ──
+    const finalPriceRounded = roundHalfUp(finalPrice, 0);
+
+    // ── Round-off adjustment (matches round_off_amount in DB) ──
+    const roundOffAmount = roundHalfUp(finalPriceRounded - finalPrice, 2);
+
+    // ── Display: whole number as the headline, exact price + round-off as a small hint ──
+    const roundOffLabel = roundOffAmount === 0
+        ? ''
+        : ` <span class="fs-11 text-muted">(${finalPrice.toFixed(2)} ${roundOffAmount > 0 ? '+' : ''}${roundOffAmount.toFixed(2)})</span>`;
+
+    finalCell.innerHTML = `${finalPriceRounded}${roundOffLabel}`;
+
+    finalCell.closest('.final-price-cell')?.classList.toggle('text-success', hasTax && applyTax && taxRate > 0 && base > 0);
+}
+
+/* ── Discount % ↔ Sale Price bidirectional sync ── ← NEW BLOCK
+   _syncingDiscount guards against the two input listeners triggering
+   each other in an infinite loop when one programmatically updates
+   the other's value. */
+let _syncingDiscount = false;
+
+function syncSalePriceFromDiscount(row){
+    if (_syncingDiscount) return;
+    _syncingDiscount = true;
+
+    const priceInput    = row.querySelector('.price-input');
+    const discountInput = row.querySelector('.discount-percent-input');
+    const saleInput     = row.querySelector('.sale-price-input');
+
+    const price    = parseFloat(priceInput?.value) || 0;
+    const discount = parseFloat(discountInput?.value) || 0;
+
+    if (price > 0 && discount > 0){
+        saleInput.value = (price - (price * discount / 100)).toFixed(2);
+    }
+
+    _syncingDiscount = false;
+}
+
+function syncDiscountFromSalePrice(row){
+    if (_syncingDiscount) return;
+    _syncingDiscount = true;
+
+    const priceInput    = row.querySelector('.price-input');
+    const discountInput = row.querySelector('.discount-percent-input');
+    const saleInput     = row.querySelector('.sale-price-input');
+
+    const price = parseFloat(priceInput?.value) || 0;
+    const sale  = parseFloat(saleInput?.value) || 0;
+
+    if (price > 0 && sale > 0 && sale < price){
+        discountInput.value = (((price - sale) / price) * 100).toFixed(2);
+    } else if (sale === 0) {
+        discountInput.value = '';
+    }
+
+    _syncingDiscount = false;
+}
+
+/* Live update: typing in Price/Sale Price/Discount %, or flipping either
+   toggle, instantly refreshes that row's Final Price — no save/reload
+   needed. Also keeps Discount % and Sale Price synced both directions. */
+document.addEventListener('input', function(e){
+    const row = e.target.closest('tr[data-has-tax]');
+    if (!row) return;
+
+    if (e.target.classList.contains('discount-percent-input')){ // ← NEW branch
+        syncSalePriceFromDiscount(row);
+        recalcRowFinalPrice(row);
+    } else if (e.target.classList.contains('sale-price-input')){
+        syncDiscountFromSalePrice(row); // ← NEW
+        recalcRowFinalPrice(row);
+    } else if (e.target.classList.contains('price-input')){
+        // Price changed — recompute sale price from the existing discount %, if any // ← NEW
+        syncSalePriceFromDiscount(row);
+        recalcRowFinalPrice(row);
+    }
+});
+
+document.addEventListener('change', function(e){
+    if (e.target.classList.contains('apply-tax-toggle') || e.target.classList.contains('is-on-sale-toggle')){ // ← UPDATED: added is-on-sale-toggle
+        const row = e.target.closest('tr[data-has-tax]');
+        if (row) recalcRowFinalPrice(row);
+    }
+});
 
 function buildInventoryTab(){
     const checked = getCheckedFormats(), c=document.getElementById('inventoryContainer');
@@ -682,6 +876,23 @@ function prefillFormatSettings(settingsData){
     });
 }
 
+function updateBookTitleBanner(){
+    const bannerText = document.getElementById('bookTitleBannerText');
+    const banner = document.getElementById('bookTitleBanner');
+    if (!bannerText) return;
+
+    const titleVal = document.getElementById('title_field')?.value.trim() || '';
+    const isbnVal  = document.getElementById('isbn_field')?.value.trim() || '';
+
+    let text = titleVal || 'New Book (untitled)';
+    if (isbnVal) text += ` (${isbnVal})`;
+
+    bannerText.textContent = text;
+    banner?.classList.toggle('is-empty', !titleVal);
+}
+
+document.getElementById('title_field')?.addEventListener('input', updateBookTitleBanner);
+document.getElementById('isbn_field')?.addEventListener('input', updateBookTitleBanner);
 /* ── AJAX save per tab ──
    Every "Save & Continue" button across all tabs calls this with itself as `btn`,
    so the spinner via setButtonLoading() automatically covers every tab.
@@ -969,6 +1180,54 @@ async function deleteGalleryImage(id, btn){
     }
 }
 
+
+/* ── Remove an already-uploaded book file (EPUB / PDF / cover preview / sample audio) ── */
+async function removeUploadedFile(fileId, btn){
+    if(!confirm('Remove this file? You can upload a new one afterward.')) return;
+
+    const url = bookFileDeleteUrlTemplate.replace('__FILE_ID__', fileId);
+
+    try {
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
+        });
+        const data = await res.json();
+
+        if(data.status === 'success'){
+            btn.closest('.uploaded-file-hint')?.remove();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message || 'Could not remove file', 'error');
+        }
+    } catch(e){
+        showToast('Something went wrong', 'error');
+    }
+}
+
+/* ── Remove a chapter's audio file only ── */
+async function removeChapterAudio(chapterId, btn){
+    if(!confirm('Remove this chapter audio?')) return;
+
+    const url = chapterAudioDeleteUrlTemplate.replace('__CHAPTER_ID__', chapterId);
+
+    try {
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
+        });
+        const data = await res.json();
+
+        if(data.status === 'success'){
+            btn.closest('.uploaded-file-hint')?.remove();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message || 'Could not remove audio', 'error');
+        }
+    } catch(e){
+        showToast('Something went wrong', 'error');
+    }
+}
 
 
 $(function(){

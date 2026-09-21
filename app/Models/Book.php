@@ -93,6 +93,10 @@ protected $appends = ['cover_image_url', 'trailer_video_url', 'average_rating', 
     {
         return $this->belongsTo(AuthorProfile::class, 'author_id');
     }
+    public function wishlistedBy()
+{
+    return $this->belongsToMany(User::class, 'wishlists')->withTimestamps();
+}
 
     public function publisher()
     {

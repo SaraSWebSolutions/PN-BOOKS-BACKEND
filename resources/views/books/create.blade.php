@@ -43,9 +43,13 @@
         <input type="hidden" name="book_id" id="book_id_field" value="">
 
         <div class="card stretch stretch-full">
-            <div class="card-header p-0 border-bottom">
-                <ul class="nav nav-tabs book-wizard-tabs" id="bookTabs">
-                    <li class="nav-item"><button type="button" class="nav-link active" data-tab="tab-basic"><span class="step-num">1</span> Basic Info</button></li>
+           <div class="card-header p-0 border-bottom">
+    <div class="book-title-banner" id="bookTitleBanner">
+        <i class="feather-book-open"></i>
+       <span id="bookTitleBannerText">New Book (untitled)</span>
+    </div>
+    <ul class="nav nav-tabs book-wizard-tabs" id="bookTabs">
+                    <li class="nav-item"><button type="button" class="nav-link active" data-tab="tab-basic"><span class="step-num">1</span> Book Info</button></li>
                     <li class="nav-item"><button type="button" class="nav-link" data-tab="tab-formats"><span class="step-num">2</span> Formats</button></li>
                     <li class="nav-item"><button type="button" class="nav-link" data-tab="tab-files"><span class="step-num">3</span> Files & DRM</button></li>
                     <li class="nav-item"><button type="button" class="nav-link" data-tab="tab-media"><span class="step-num">4</span> Media</button></li>
@@ -81,7 +85,14 @@
     'currency_id'     => optional($c->currency)->id,
     'currency_code'   => optional($c->currency)->code,
     'currency_symbol' => optional($c->currency)->symbol ?: optional($c->currency)->code,
+    'tax_id'          => optional($c->activeTax)->id,
+    'tax_name'        => optional($c->activeTax)->tax_name,
+    'tax_rate'        => optional($c->activeTax)->tax_rate,
 ])) !!}</script>
+
+
+
+
 <script id="formatsData" type="application/json">{!! json_encode($formats->map(fn($f)=>['id'=>$f->id,'code'=>$f->code,'name'=>$f->name,'icon'=>$f->icon,'requires_shipping'=>$f->requires_shipping])) !!}</script>
 @endsection
 

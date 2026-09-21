@@ -15,7 +15,9 @@ use Illuminate\Support\Str;
 
 class WebsiteContentController extends Controller
 {
-    /* ── Page list (left nav / tabs in the admin screen) ── */
+    
+const UPLOAD_DIR      = 'uploads/website';                        // project root / uploads/website/...
+const ALLOWED_FOLDERS = ['banners', 'sections', 'section-items'];
     public function index()
     {
         $pages = WebsitePage::orderBy('name_en')->get();
@@ -54,61 +56,66 @@ class WebsiteContentController extends Controller
 }
     /* ───────────── Banners ───────────── */
 
-    public function storeBanner(Request $request, WebsitePage $page)
-    {
-        $data = $request->validate([
-            'banner_id'        => 'nullable|exists:website_banners,id',
-            'title_en'         => 'nullable|string|max:200',
-            'title_ms'         => 'nullable|string|max:200',
-            'subtitle_en'      => 'nullable|string|max:255',
-            'subtitle_ms'      => 'nullable|string|max:255',
-            'description_en'   => 'nullable|string',
-            'description_ms'   => 'nullable|string',
-            'button_text_en'   => 'nullable|string|max:100',
-            'button_text_ms'   => 'nullable|string|max:100',
-            'button_url'       => 'nullable|string|max:255',
-            'sort_order'       => 'nullable|integer',
-            'is_active'        => 'nullable|boolean',
-            'image'            => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-            'mobile_image'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+public function storeBanner(Request $request, WebsitePage $page)
+{
+    $data = $request->validate([
+        'banner_id'        => 'nullable|exists:website_banners,id',
+        'title_en'         => 'nullable|string|max:200',
+        'title_ms'         => 'nullable|string|max:200',
+        'subtitle_en'      => 'nullable|string|max:255',
+        'subtitle_ms'      => 'nullable|string|max:255',
+        'description_en'   => 'nullable|string',
+        'description_ms'   => 'nullable|string',
+        'button_text_en'   => 'nullable|string|max:100',
+        'button_text_ms'   => 'nullable|string|max:100',
+        'button_url'       => 'nullable|string|max:255',
+        'sort_order'       => 'nullable|integer',
+        'is_active'        => 'nullable|boolean',
+        'image'            => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+        'mobile_image'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+    ]);
+
+    try {
+        $banner = ! empty($data['banner_id'])
+            ? WebsiteBanner::findOrFail($data['banner_id'])
+            : new WebsiteBanner();
+
+        $banner->fill([
+            'page_id'         => $page->id,
+            'title_en'        => $data['title_en'] ?? null,
+            'title_ms'        => $data['title_ms'] ?? null,
+            'subtitle_en'     => $data['subtitle_en'] ?? null,
+            'subtitle_ms'     => $data['subtitle_ms'] ?? null,
+            'description_en'  => $data['description_en'] ?? null,
+            'description_ms'  => $data['description_ms'] ?? null,
+            'button_text_en'  => $data['button_text_en'] ?? null,
+            'button_text_ms'  => $data['button_text_ms'] ?? null,
+            'button_url'      => $data['button_url'] ?? null,
+            'sort_order'      => $data['sort_order'] ?? 0,
+            'is_active'       => $request->boolean('is_active', true),
         ]);
 
-        try {
-            $banner = ! empty($data['banner_id'])
-                ? WebsiteBanner::findOrFail($data['banner_id'])
-                : new WebsiteBanner();
-
-            $banner->fill([
-                'page_id'         => $page->id,
-                'title_en'        => $data['title_en'] ?? null,
-                'title_ms'        => $data['title_ms'] ?? null,
-                'subtitle_en'     => $data['subtitle_en'] ?? null,
-                'subtitle_ms'     => $data['subtitle_ms'] ?? null,
-                'description_en'  => $data['description_en'] ?? null,
-                'description_ms'  => $data['description_ms'] ?? null,
-                'button_text_en'  => $data['button_text_en'] ?? null,
-                'button_text_ms'  => $data['button_text_ms'] ?? null,
-                'button_url'      => $data['button_url'] ?? null,
-                'sort_order'      => $data['sort_order'] ?? 0,
-                'is_active'       => $request->boolean('is_active', true),
-            ]);
-
-            if ($request->hasFile('image')) {
-                $banner->image = $this->storeUpload($request->file('image'), 'website/banners');
-            }
-            if ($request->hasFile('mobile_image')) {
-                $banner->mobile_image = $this->storeUpload($request->file('mobile_image'), 'website/banners');
-            }
-
-            $banner->created_by = $banner->created_by ?? Auth::id();
-            $banner->updated_by = Auth::id();
-            $banner->save();
-
-            return response()->json(['status' => 'success', 'message' => 'Banner saved', 'banner' => $banner]);
-        } catch (\Throwable $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        if ($request->hasFile('image')) {
+            $this->deleteUpload($banner->image);   // remove old file
+            $banner->image = $this->storeUpload($request->file('image'), 'banners');
         }
+        if ($request->hasFile('mobile_image')) {
+            $this->deleteUpload($banner->mobile_image);
+            $banner->mobile_image = $this->storeUpload($request->file('mobile_image'), 'banners');
+        }
+
+        $banner->created_by = $banner->created_by ?? Auth::id();
+        $banner->updated_by = Auth::id();
+        $banner->save();
+
+        return response()->json(['status' => 'success', 'message' => 'Banner saved', 'banner' => $banner]);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
     }
+}
+
+
+
     public function storeSectionItem(Request $request, WebsiteSection $section)
 {
     $data = $request->validate([
@@ -165,19 +172,17 @@ public function destroySectionItem(WebsiteSectionItem $item)
         return response()->json(['status' => 'success', 'message' => 'Order updated']);
     }
 
-    public function destroyBanner(WebsiteBanner $banner)
-    {
-        try {
-            $path = public_path($banner->image);
-            if ($banner->image && File::exists($path)) {
-                File::delete($path);
-            }
-            $banner->delete();
-            return response()->json(['status' => 'success', 'message' => 'Banner deleted']);
-        } catch (\Throwable $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
-        }
+public function destroyBanner(WebsiteBanner $banner)
+{
+    try {
+        $this->deleteUpload($banner->image);
+        $this->deleteUpload($banner->mobile_image);
+        $banner->delete();
+        return response()->json(['status' => 'success', 'message' => 'Banner deleted']);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
     }
+}
 
     /* ───────────── Sections (stats / features) ───────────── */
 
@@ -263,23 +268,44 @@ public function destroySectionItem(WebsiteSectionItem $item)
 
     /* ───────────── Helper (identical pattern to BookController) ───────────── */
 
-    private function storeUpload($file, string $folder): string
-    {
-        // NOTE: your BookController::storeUpload() writes to base_path("uploads/...")
-        // but deleteGalleryImage() reads back with public_path(). For banners that the
-        // PUBLIC website must display, store under public_path() so `asset()` works
-        // immediately with no symlink needed:
-        $uploadPath = public_path("uploads/{$folder}");
+    /* ── Streams website images from project-root uploads/website/{folder}/ (outside public/) ── */
+public function serveImage(string $folder, string $filename)
+{
+    abort_unless(in_array($folder, self::ALLOWED_FOLDERS, true), 404);
 
-        if (! File::exists($uploadPath)) {
-            File::makeDirectory($uploadPath, 0755, true);
-        }
+    $path = base_path(self::UPLOAD_DIR . '/' . $folder . '/' . basename($filename));
 
-        $filename = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
-            . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-
-        $file->move($uploadPath, $filename);
-
-        return "uploads/{$folder}/{$filename}";
+    if (! File::exists($path) || ! File::isFile($path)) {
+        abort(404);
     }
+
+    return response()->file($path, [
+        'Content-Type'  => File::mimeType($path) ?: 'application/octet-stream',
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+}
+
+private function storeUpload($file, string $folder): string
+{
+    $uploadPath = base_path(self::UPLOAD_DIR . '/' . $folder);   // -> Pnbooks\uploads\website\banners
+
+    if (! File::exists($uploadPath)) {
+        File::makeDirectory($uploadPath, 0755, true);
+    }
+
+    $filename = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
+        . '_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+
+    $file->move($uploadPath, $filename);
+
+    // stored in DB as "uploads/website/banners/xxx.jpg"
+    return self::UPLOAD_DIR . '/' . $folder . '/' . $filename;
+}
+
+private function deleteUpload(?string $relativePath): void
+{
+    if ($relativePath && File::exists(base_path($relativePath))) {
+        File::delete(base_path($relativePath));
+    }
+}
 }

@@ -25,12 +25,16 @@ class CustomerProfile extends Model
         'language_id',     // NEW — FK to languages
         'newsletter_subscribed',
         'loyalty_points',
+         'show_recommendations',   // NEW
+    'new_release_alerts',     // NEW
     ];
 
     protected $casts = [
         'date_of_birth'         => 'date',
         'newsletter_subscribed' => 'boolean',
         'loyalty_points'        => 'integer',
+         'show_recommendations'   => 'boolean', // NEW
+    'new_release_alerts'     => 'boolean', // NEW
     ];
 
     protected $appends = ['profile_photo_url'];
@@ -56,4 +60,8 @@ class CustomerProfile extends Model
     {
         return $this->profile_photo ? asset('storage/' . $this->profile_photo) : null;
     }
+    public function interestedCategories()
+{
+    return $this->belongsToMany(Category::class, 'category_customer_profile');
+}
 }

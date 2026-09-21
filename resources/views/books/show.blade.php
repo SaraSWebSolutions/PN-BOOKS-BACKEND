@@ -38,6 +38,7 @@
                         <span class="badge status-badge status-visibility">{{ ucfirst($book->visibility) }}</span>
                         @if($book->is_featured)<span class="badge status-badge status-featured"><i class="feather-star fs-11 me-1"></i>Featured</span>@endif
                         @if($book->is_bestseller)<span class="badge status-badge status-bestseller"><i class="feather-trending-up fs-11 me-1"></i>Bestseller</span>@endif
+                        @if($book->is_never_miss_to_read)<span class="badge status-badge status-featured"><i class="feather-bookmark fs-11 me-1"></i>Never Miss To Read</span>@endif
                     </div>
 
                     <h3 class="fw-bold mb-1">{{ $book->title }}</h3>
@@ -46,7 +47,12 @@
                     <div class="d-flex flex-wrap gap-4 fs-13 text-muted mt-3">
                         <div><i class="feather-user me-1"></i>{{ $book->author->pen_name ?? optional($book->author->user)->name ?? '—' }}</div>
                         <div><i class="feather-briefcase me-1"></i>{{ $book->publisher->company_name ?? optional($book->publisher->user)->name ?? '—' }}</div>
-                        <div><i class="feather-hash me-1"></i>{{ $book->isbn ?: '—' }}</div>
+                        <div><i class="feather-hash me-1"></i>ISBN: {{ $book->isbn ?: '—' }}</div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mt-3">
+                        <span class="text-warning fs-15">{{ str_repeat('★', (int) round($book->average_rating)) }}{{ str_repeat('☆', 5 - (int) round($book->average_rating)) }}</span>
+                        <span class="fs-13 text-muted">{{ $book->average_rating }} ({{ $book->reviews_count }} reviews)</span>
                     </div>
                 </div>
 
@@ -81,6 +87,56 @@
                 </div>
             </div>
             @endif
+
+            {{-- ── Publishing Info ─────────────────────────────────────── --}}
+            <div class="card mb-4 section-card">
+                <div class="section-card-header"><i class="feather-calendar"></i> Publishing Info</div>
+                <div class="card-body">
+                    <div class="row fs-13 gy-2">
+                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">Publish Type</span><strong>{{ ucfirst($book->publish_type ?? '—') }}</strong></div>
+                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">Publication Date</span><strong>{{ $book->publication_date?->format('d M Y') ?? '—' }}</strong></div>
+                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">Publication Time</span><strong>{{ $book->publication_time ?? '—' }}</strong></div>
+                        <div class="col-md-3">
+                            <span class="text-muted d-block fs-11 text-uppercase">Pre-Order</span>
+                            <strong>
+                                @if($book->allow_pre_order)
+                                    <span class="badge bg-light-success text-success">Enabled</span>
+                                @else
+                                    <span class="badge bg-light-danger text-danger">Disabled</span>
+                                @endif
+                            </strong>
+                        </div>
+
+                        @if($book->allow_pre_order)
+                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">Pre-Order Start</span><strong>{{ $book->pre_order_start_date?->format('d M Y') ?? '—' }}</strong></div>
+                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">Pre-Order End</span><strong>{{ $book->pre_order_end_date?->format('d M Y') ?? '—' }}</strong></div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- ── Engagement Settings ─────────────────────────────────── --}}
+            <div class="card mb-4 section-card">
+                <div class="section-card-header"><i class="feather-sliders"></i> Engagement Settings</div>
+                <div class="card-body d-flex flex-wrap gap-2">
+                    @php
+                        $toggles = [
+                            'Reviews'             => $book->allow_reviews,
+                            'Wishlist'            => $book->enable_wishlist,
+                            'Share'               => $book->enable_share,
+                            'Compare'             => $book->enable_compare,
+                            'Email Notify'        => $book->send_email_notification,
+                            'Show In Store'       => $book->show_in_store,
+                            'Never Miss To Read'  => $book->is_never_miss_to_read,
+                        ];
+                    @endphp
+                    @foreach($toggles as $label => $value)
+                        <span class="badge {{ $value ? 'bg-light-success text-success' : 'bg-light-danger text-danger' }}">
+                            {{ $label }}: {{ $value ? 'On' : 'Off' }}
+                        </span>
+                    @endforeach
+                </div>
+            </div>
 
             {{-- ── Formats ──────────────────────────────────────────────── --}}
             <div class="card mb-4 section-card">
@@ -164,30 +220,79 @@
 
             {{-- ── Pricing & Inventory side by side ─────────────────────── --}}
             <div class="row g-4">
-                @if($book->prices->count())
-                <div class="col-md-6">
-                    <div class="card mb-4 section-card h-100">
-                        <div class="section-card-header"><i class="feather-dollar-sign"></i> Pricing</div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-sm align-middle mb-0">
-                                    <thead><tr><th>Format</th><th>Country</th><th class="text-end">Price</th><th class="text-end">Sale</th></tr></thead>
-                                    <tbody>
-                                    @foreach($book->prices as $price)
-                                        <tr>
-                                            <td>{{ $price->format->name ?? '—' }}</td>
-                                            <td>{{ $price->country->name ?? '—' }}</td>
-                                            <td class="text-end">{{ $price->currency->symbol ?? '' }}{{ number_format($price->price, 2) }}</td>
-                                            <td class="text-end">{{ $price->sale_price ? ($price->currency->symbol ?? '').number_format($price->sale_price, 2) : '—' }}</td>
-                                        </tr>
-                                    @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @endif
+              @if($book->prices->count())
+<div class="col-md-6">
+    <div class="card mb-4 section-card h-100">
+        <div class="section-card-header"><i class="feather-dollar-sign"></i> Pricing</div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Format</th>
+                            <th>Country</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Sale</th>
+                            <th>Tax</th>
+                            <th>Offer</th>
+                            <th class="text-end">Final (Display)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($book->prices as $price)
+                        @php $symbol = $price->currency->symbol ?? ''; @endphp
+                        <tr>
+                            <td>{{ $price->format->name ?? '—' }}</td>
+                            <td>{{ $price->country->name ?? '—' }}</td>
+                            <td class="text-end">{{ $symbol }}{{ number_format($price->price, 2) }}</td>
+                            <td class="text-end">
+                                {{ $price->sale_price ? $symbol.number_format($price->sale_price, 2) : '—' }}
+                            </td>
+                            <td class="fs-12">
+                                @if($price->tax_id && $price->tax_rate_snapshot)
+                                    {{ $price->tax->tax_name ?? 'Tax' }} ({{ $price->tax_rate_snapshot }}%)
+                                @else
+                                    <span class="text-muted">No tax</span>
+                                @endif
+                            </td>
+                            <td class="fs-12">
+                                @if($price->offer)
+                                    <span class="badge bg-light-success text-success">
+                                        {{ $price->offer['offer_title'] }}
+                                        ({{ $price->offer['discount_type'] === 'percentage'
+                                                ? $price->offer['discount_value'].'%'
+                                                : $symbol.number_format($price->offer['discount_value'], 2) }})
+                                    </span>
+                                    @if($price->offer['ends_at'])
+                                        <br>
+                                        <span class="fs-11 text-muted">
+                                            Ends {{ \Illuminate\Support\Carbon::parse($price->offer['ends_at'])->format('d M Y') }}
+                                        </span>
+                                    @endif
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            <td class="text-end fw-semibold">
+                                {{ $symbol }}{{ number_format($price->display['final_price'], 0) }}
+                                @if($price->display['strike_price'])
+                                    <br>
+                                    <span class="fs-11 fw-normal text-muted text-decoration-line-through">
+                                        {{ $symbol }}{{ number_format($price->display['strike_price'], 0) }}
+                                    </span>
+                                @endif
+                                <br>
+                                <span class="badge bg-light text-muted fs-10">source: {{ $price->display['source'] }}</span>
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
                 @if($book->inventory->count())
                 <div class="col-md-6">
@@ -272,6 +377,108 @@
                             {{ $book->seo->enable_structured_data ? 'Structured Data On' : 'Structured Data Off' }}
                         </span>
                     </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- ── Ratings & Reviews ───────────────────────────────────── --}}
+            <div class="card mb-4 section-card">
+                <div class="section-card-header"><i class="feather-star"></i> Ratings & Reviews</div>
+                <div class="card-body">
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-3 text-center border-end">
+                            <h2 class="mb-0">{{ $book->average_rating }}</h2>
+                            <div class="text-warning fs-15">
+                                {{ str_repeat('★', (int) round($book->average_rating)) }}{{ str_repeat('☆', 5 - (int) round($book->average_rating)) }}
+                            </div>
+                            <span class="fs-12 text-muted">{{ $book->reviews_count }} review(s)</span>
+                        </div>
+                        <div class="col-md-9">
+                            @foreach($book->rating_breakdown as $row)
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="fs-12" style="width:40px;">{{ $row['star'] }} ★</span>
+                                    <div class="progress flex-grow-1" style="height:8px;">
+                                        <div class="progress-bar bg-warning" style="width:{{ $row['percentage'] }}%"></div>
+                                    </div>
+                                    <span class="fs-12 text-muted" style="width:70px;">{{ $row['count'] }} ({{ $row['percentage'] }}%)</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    @forelse($book->approvedReviews as $review)
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ $review->user->name ?? 'Anonymous' }}</strong>
+                                    @if($review->is_verified_purchase)
+                                        <span class="badge bg-light-success text-success ms-1 fs-10">
+                                            <i class="feather-check-circle fs-10"></i> Verified Purchase
+                                        </span>
+                                    @endif
+                                    <div class="text-warning fs-13">
+                                        {{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}
+                                    </div>
+                                </div>
+                                <span class="fs-11 text-muted">{{ $review->created_at->format('d M Y') }}</span>
+                            </div>
+
+                            @if($review->title)
+                                <p class="fw-semibold mb-1 mt-2">{{ $review->title }}</p>
+                            @endif
+                            @if($review->review)
+                                <p class="mb-2 fs-13 text-muted">{{ $review->review }}</p>
+                            @endif
+
+                            <span class="fs-11 text-muted">
+                                <i class="feather-thumbs-up fs-11"></i> {{ $review->helpful_count }} found this helpful
+                            </span>
+                        </div>
+                    @empty
+                        <p class="text-muted mb-0">No reviews yet.</p>
+                    @endforelse
+
+                </div>
+            </div>
+
+            {{-- ── Gallery Images ──────────────────────────────────────── --}}
+            @if($book->galleryImages->count())
+            <div class="card mb-4 section-card">
+                <div class="section-card-header"><i class="feather-image"></i> Gallery</div>
+                <div class="card-body d-flex flex-wrap gap-2">
+                    @foreach($book->galleryImages as $img)
+                        <img src="{{ asset($img->image_path) }}" style="width:100px;height:140px;object-fit:cover;border-radius:8px;">
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            {{-- ── Trailer ──────────────────────────────────────────────── --}}
+            @if($book->trailer_video_url)
+            <div class="card mb-4 section-card">
+                <div class="section-card-header"><i class="feather-video"></i> Trailer</div>
+                <div class="card-body">
+                    <video controls style="max-width:100%;border-radius:8px;">
+                        <source src="{{ $book->trailer_video_url }}">
+                    </video>
+                </div>
+            </div>
+            @endif
+
+            {{-- ── Related Books ────────────────────────────────────────── --}}
+            @if($book->relatedBooks->count())
+            <div class="card mb-4 section-card">
+                <div class="section-card-header"><i class="feather-link"></i> Related Books</div>
+                <div class="card-body d-flex flex-wrap gap-3">
+                    @foreach($book->relatedBooks as $related)
+                        <div style="width:100px;">
+                            <img src="{{ $related->cover_image_url ?? 'https://placehold.co/100x140' }}" style="width:100px;height:140px;object-fit:cover;border-radius:8px;">
+                            <p class="fs-11 mt-1 mb-0 text-truncate">{{ $related->title }}</p>
+                        </div>
+                    @endforeach
                 </div>
             </div>
             @endif

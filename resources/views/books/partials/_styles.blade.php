@@ -82,4 +82,44 @@
 
 .isbn-popup-info{ border-left:3px solid #6366f1; color:#3730a3; }
 .isbn-popup-info .isbn-popup-icon{ color:#6366f1; }
+
+.final-price-cell.text-success{
+    color: #10b981 !important;
+}
+
+.book-header-row{
+    display:flex;
+    align-items:stretch;   /* both children fill full header height */
+}
+
+.book-title-banner{
+    display:flex;
+    align-items:center;         /* vertical-center icon+text */
+    gap:8px;
+    padding:16px 20px;          /* ⬅ SAME as .book-wizard-tabs .nav-link padding */
+    font-size:14px;
+    font-weight:700;
+    color:#374151;
+    white-space:nowrap;
+    flex-shrink:0;
+    align-self:stretch;         /* ⬅ makes the border-right span full height */
+    border-right:1px solid #e2e5ec;   /* the divider line, now full-height */
+}
+
+.book-title-banner i{
+    font-size:16px;
+    color:#7b5cf0;
+}
+
+.book-title-banner.is-empty{
+    color:#9ca3af;
+    font-style:italic;
+}
+
+/* tabs row should not add its own extra height beside the banner */
+.book-wizard-tabs{
+    align-items:stretch;
+    flex:1;
+}
+
 </style>

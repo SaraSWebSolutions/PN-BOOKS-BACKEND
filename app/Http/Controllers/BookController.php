@@ -28,6 +28,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage; 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\Rule;
+use App\Models\Offer;
 
 class BookController extends Controller
 {
@@ -84,24 +86,27 @@ class BookController extends Controller
 
     /* ───────────────────────── Listing ───────────────────────── */
 
-    public function index()
-    {
-        $books = $this->scopeToOwner(
-            Book::with(['category', 'author.user', 'publisher.user', 'formats', 'prices'])
-        )->latest()->get(); // ✅ no ->paginate() — JS handles pagination like Categories
+   public function index()
+{
+    $books = $this->scopeToOwner(
+        Book::with(['category', 'author.user', 'publisher.user', 'formats', 'prices'])
+    )->latest()->get();
 
-        $statsQuery = fn () => $this->scopeToOwner(Book::query());
+    $statsQuery = fn () => $this->scopeToOwner(Book::query());
 
-        $stats = [
-            'total'     => $statsQuery()->count(),
-            'published' => $statsQuery()->where('status', 'published')->count(),
-            'draft'     => $statsQuery()->where('status', 'draft')->count(),
-            'featured'  => $statsQuery()->where('is_featured', true)->count(),
-        ];
+    $stats = [
+        'total'     => $statsQuery()->count(),
+        'published' => $statsQuery()->where('status', 'published')->count(),
+        'draft'     => $statsQuery()->where('status', 'draft')->count(),
+        'featured'  => $statsQuery()->where('is_featured', true)->count(),
+    ];
 
-        return view('books.index', compact('books', 'stats'));
-    }
+    // ✅ NEW — for the Category / Author filter dropdowns
+    $categories = Category::active()->ordered()->get();
+    $authors    = AuthorProfile::with('user')->active()->get();
 
+    return view('books.index', compact('books', 'stats', 'categories', 'authors'));
+}
     public function create()
     {
         return view('books.create', [
@@ -113,7 +118,7 @@ class BookController extends Controller
             'categories'  => Category::active()->ordered()->get(),
             'formats'     => BookFormat::active()->ordered()->get(),
             'languages'   => Language::active()->ordered()->get(),
-           'countries' => Country::with('currencies')->get(),
+           'countries' => Country::with('activeTax')->get(),
         ]);
     }
 
@@ -143,34 +148,157 @@ class BookController extends Controller
             'categories'  => Category::active()->ordered()->get(),
             'formats'     => BookFormat::active()->ordered()->get(),
             'languages'   => Language::active()->ordered()->get(),
-            'countries'   => Country::all(),
+            'countries' => Country::with('activeTax')->get(),
         ]);
     }
 
-    // ✅ Book detail / preview page
-    public function show(Book $book)
-    {
-        $this->authorizeOwner($book);
+   // ✅ Book detail / preview page
+public function show(Book $book)
+{
+    $this->authorizeOwner($book);
 
-        $book->load(
-            'category',
-            'subcategory',
-            'series',
-            'author.user',
-            'publisher.user',
-            'languages',
-            'formats',
-            'prices.country',
-            'prices.currency',
-            'inventory.format',
-            'shipping.methods',
-            'seo',
-            'files.format',
-            'chapters'
-        );
+    $book->load(
+        'category',
+        'subcategory',
+        'series',
+        'author.user',
+        'publisher.user',
+        'languages',
+        'formats',
+        'prices.country',
+        'prices.currency',
+        'prices.tax',              // ✅ needed for tax_name in pricing table
+        'inventory.format',
+        'shipping.methods',
+        'seo',
+        'files.format',
+        'chapters',
+        'galleryImages',
+        'approvedReviews.user',
+        'relatedBooks'
+    );
 
-        return view('books.show', compact('book'));
+    // ✅ NEW: resolve tax + offer for every price row so the Pricing table
+    // can show which offer (if any) is currently applied, same logic as the storefront API.
+    $this->attachOfferInfoToPrices($book);
+
+    $totalReviews = $book->approvedReviews()->count();
+    $ratingBreakdown = [];
+    for ($star = 5; $star >= 1; $star--) {
+        $count = $book->approvedReviews()->where('rating', $star)->count();
+        $ratingBreakdown[] = [
+            'star'       => $star,
+            'count'      => $count,
+            'percentage' => $totalReviews > 0 ? round(($count / $totalReviews) * 100) : 0,
+        ];
     }
+    $book->setAttribute('rating_breakdown', $ratingBreakdown);
+
+    return view('books.show', compact('book'));
+}
+
+/**
+ * Attaches ->offer and ->display to each BookPrice in $book->prices,
+ * using the exact same matching + specificity logic as BookApiController.
+ * This lets the admin preview page show "which offer is currently winning"
+ * for each format/country row, not just the raw price + tax.
+ */
+private function attachOfferInfoToPrices(Book $book): void
+{
+    $book->prices->each(function ($price) use ($book) {
+        $offer = $this->resolveApplicableOffer($book, $price->book_format_id, $price->country_id);
+        $price->setAttribute('offer', null);
+
+        $bookFinalRounded = $price->final_price_rounded;
+        $displayFinal     = $bookFinalRounded ?? (int) round((float) $price->price);
+        $displaySource    = 'book';
+        $strikePrice       = null;
+
+        if ($offer) {
+            $taxRate   = (float) ($price->tax_rate_snapshot ?? 0);
+            $offerCalc = $this->computeOfferPricing((float) $price->price, $offer, $taxRate);
+            $price->setAttribute('offer', $offerCalc);
+
+            if ($bookFinalRounded === null || $offerCalc['final_price_rounded'] < $bookFinalRounded) {
+                $displayFinal  = $offerCalc['final_price_rounded'];
+                $displaySource = 'offer';
+                $strikePrice   = $bookFinalRounded ?? (int) round((float) $price->price);
+            }
+        }
+
+        $price->setAttribute('display', [
+            'source'       => $displaySource,
+            'final_price'  => $displayFinal,
+            'strike_price' => $strikePrice,
+        ]);
+    });
+}
+
+private function resolveApplicableOffer(Book $book, int $formatId, ?int $countryId): ?Offer
+{
+    $candidates = Offer::active()
+        ->runningNow()
+        ->forCountry($countryId)
+        ->where(function ($q) use ($book, $formatId) {
+            $q->where('target_type', 'all')
+              ->orWhere(function ($q2) use ($book) {
+                  $q2->where('target_type', 'book')->where('book_id', $book->id);
+              })
+              ->orWhere(function ($q2) use ($book) {
+                  $q2->where('target_type', 'category')->where('category_id', $book->category_id);
+              })
+              ->orWhere(function ($q2) use ($formatId) {
+                  $q2->where('target_type', 'format')->where('book_format_id', $formatId);
+              });
+        })
+        ->get();
+
+    if ($candidates->isEmpty()) {
+        return null;
+    }
+
+    $specificity = ['book' => 4, 'format' => 3, 'category' => 2, 'all' => 1];
+
+    return $candidates->sort(function ($a, $b) use ($specificity) {
+        $aCountryScore = $a->country_id ? 1 : 0;
+        $bCountryScore = $b->country_id ? 1 : 0;
+        if ($aCountryScore !== $bCountryScore) {
+            return $bCountryScore <=> $aCountryScore;
+        }
+        return ($specificity[$b->target_type] ?? 0) <=> ($specificity[$a->target_type] ?? 0);
+    })->first();
+}
+
+private function computeOfferPricing(float $basePrice, Offer $offer, float $taxRate): array
+{
+    $discountAmount = $offer->discount_type === 'percentage'
+        ? $basePrice * ((float) $offer->discount_value / 100)
+        : (float) $offer->discount_value;
+
+    $discountAmount = min($discountAmount, $basePrice);
+    $offerPrice     = round($basePrice - $discountAmount, 2, PHP_ROUND_HALF_UP);
+
+    $finalPrice        = round($offerPrice + ($offerPrice * $taxRate / 100), 2, PHP_ROUND_HALF_UP);
+    $finalPriceRounded = (int) round($finalPrice, 0, PHP_ROUND_HALF_UP);
+
+    return [
+        'offer_id'            => $offer->id,
+        'offer_title'         => $offer->title,
+        'discount_type'       => $offer->discount_type,
+        'discount_value'      => (float) $offer->discount_value,
+        'discount_amount'     => round($discountAmount, 2, PHP_ROUND_HALF_UP),
+        'offer_price'         => $offerPrice,
+        'final_price'         => $finalPrice,
+        'final_price_rounded' => $finalPriceRounded,
+        'ends_at'             => optional($offer->ends_at)->toIso8601String(),
+    ];
+}
+
+
+
+
+
+
 
     public function destroy(Book $book)
     {
@@ -224,7 +352,7 @@ class BookController extends Controller
 
     /* ───────────────────────── Tab 1: Basic Info ───────────────────────── */
 
-    public function storeBasic(Request $request)
+    public function storeBasic_10_9_26(Request $request)
     {
         $data = $request->validate([
             'book_id'            => 'nullable|exists:books,id',
@@ -288,6 +416,80 @@ class BookController extends Controller
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
         }
     }
+
+    public function storeBasic(Request $request)
+{
+    $data = $request->validate([
+        'book_id'            => 'nullable|exists:books,id',
+        'category_id'        => 'required|exists:categories,id',
+        'subcategory_id'     => 'nullable|exists:subcategories,id',
+        'series_id'          => 'nullable|exists:series,id',
+        'author_id'          => 'required|exists:author_profiles,id',
+        'publisher_id'       => 'required|exists:publisher_profiles,id',
+        'title'              => 'required|string|max:200',
+        'subtitle'           => 'nullable|string|max:200',
+        'isbn'               => [
+            'required',
+            'string',
+            'max:20',
+            Rule::unique('books', 'isbn')
+                ->ignore($request->book_id)
+                ->withoutTrashed(),
+        ],
+        'languages'          => 'required|array|min:1',
+        'languages.*'        => 'exists:languages,id',
+        'short_description'  => 'nullable|string|max:160',
+        'description'        => 'required|string',
+        'cover_image'        => 'nullable|image|mimes:jpg,jpeg,png,webp',
+    ], [
+        'isbn.unique' => 'This ISBN is already used by another book. Please enter a unique ISBN.',
+    ]);
+
+    try {
+        $book = ! empty($data['book_id']) ? Book::findOrFail($data['book_id']) : new Book();
+
+        // ✅ Ownership check for edits — a non-admin can only touch a book they created.
+        if ($book->exists) {
+            $this->authorizeOwner($book);
+        }
+
+        $book->fill([
+            'category_id'        => $data['category_id'],
+            'subcategory_id'     => $data['subcategory_id'] ?? null,
+            'series_id'          => $data['series_id'] ?? null,
+            'author_id'          => $data['author_id'],
+            'publisher_id'       => $data['publisher_id'],
+            'title'              => trim($data['title']),
+            'subtitle'           => $data['subtitle'] ?? null,
+            'isbn'               => $data['isbn'] ?? null,
+            'short_description'  => $data['short_description'] ?? null,
+            'description'        => $data['description'] ?? null,
+        ]);
+
+        if (! $book->exists) {
+            $book->status     = 'draft';
+            $book->created_by = Auth::id(); // ✅ this is the line that ties the book to whoever is logged in
+        }
+        $book->updated_by = Auth::id();
+
+        if ($request->hasFile('cover_image')) {
+            $book->cover_image = $this->storeUpload($request->file('cover_image'), 'books');
+        }
+
+        $book->save();
+        $book->languages()->sync($data['languages']);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Basic info saved',
+            'book_id' => $book->id,
+        ]);
+    } catch (HttpException $e) {
+        throw $e; // let 403s from authorizeOwner() propagate as-is
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+    }
+}
 
     /* ───────────────────────── Tab 2: Formats ───────────────────────── */
 
@@ -414,6 +616,8 @@ class BookController extends Controller
 
     public function storeFiles(Request $request, Book $book)
 {
+
+
     $this->authorizeOwner($book);
 
     $request->validate([
@@ -500,6 +704,47 @@ class BookController extends Controller
     }
 }
 
+/* ── Remove a single uploaded file (EPUB, PDF, cover preview, sample audio) ── */
+public function destroyFile(BookFile $bookFile)
+{
+    $this->authorizeOwner($bookFile->book);
+
+    $this->deleteUpload($bookFile->file_path);
+    $bookFile->delete();
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'File removed successfully.',
+    ]);
+}
+
+/* ── Remove a chapter's audio file only (keeps the chapter row/title) ── */
+public function destroyChapterAudio(BookChapter $chapter)
+{
+    $this->authorizeOwner($chapter->book);
+
+    if ($chapter->audio_file_path) {
+        $this->deleteUpload($chapter->audio_file_path);
+    }
+
+    $chapter->update([
+        'audio_file_path' => null,
+        'file_size'        => null,
+        'status'           => 'pending',
+    ]);
+
+    return response()->json([
+        'status'  => 'success',
+        'message' => 'Chapter audio removed.',
+    ]);
+}
+
+private function deleteUpload(?string $relativePath): void
+{
+    if ($relativePath && File::exists(base_path($relativePath))) {
+        File::delete(base_path($relativePath));
+    }
+}
 /**
  * Runs the EPUB through scripts/validate-epub.mjs (epubcheck-ts + @smoores/epub)
  * and returns a normalized result. Never leaves a temp file behind.
@@ -509,7 +754,7 @@ private function validateEpubFile(UploadedFile $file): array
     $tempPath = $file->store('temp/epub', 'local');
     $fullPath = Storage::disk('local')->path($tempPath);
 
-    $nodeBinary = config('services.node.path', 'node'); // set NODE_PATH in .env if node isn't on PATH
+    $nodeBinary = config('services.node.path', 'node');
     $scriptPath = base_path('scripts/validate-epub.mjs');
 
     $result = Process::timeout(120)->run([$nodeBinary, $scriptPath, $fullPath]);
@@ -529,9 +774,19 @@ private function validateEpubFile(UploadedFile $file): array
         ];
     }
 
+    // Rule IDs we choose to treat as non-blocking (mirrors what most storefronts tolerate)
+    $ignoredCodes = ['OPF-085', 'OPF-092', 'RSC-005'];
+
+    $messages = $report['messages'] ?? [];
+
+    $blockingErrors = array_filter($messages, function ($m) use ($ignoredCodes) {
+        return strtoupper($m['severity'] ?? '') === 'ERROR'
+            && ! in_array($m['id'] ?? '', $ignoredCodes, true);
+    });
+
     return [
-        'valid'        => (bool) ($report['valid'] ?? false),
-        'messages'     => $report['messages'] ?? [],
+        'valid'        => empty($blockingErrors),
+        'messages'     => $messages,
         'errorCount'   => $report['errorCount'] ?? null,
         'warningCount' => $report['warningCount'] ?? null,
         'metadata'     => $report['metadata'] ?? null,
@@ -543,37 +798,67 @@ private function validateEpubFile(UploadedFile $file): array
 
     /* ───────────────────────── Tab 4: Pricing ───────────────────────── */
 
-    public function storePricing(Request $request, Book $book)
-    {
-        $this->authorizeOwner($book);
+public function storePricing(Request $request, Book $book)
+{
+    $this->authorizeOwner($book);
 
-        $data = $request->validate(['prices' => 'required|array']);
+    $data = $request->validate(['prices' => 'required|array']);
 
-        try {
-            foreach ($data['prices'] as $formatId => $countryPrices) {
-                foreach ($countryPrices as $countryId => $priceData) {
-                    if (empty($priceData['price'])) {
-                        continue;
-                    }
-                    BookPrice::updateOrCreate(
-                        ['book_id' => $book->id, 'book_format_id' => $formatId, 'country_id' => $countryId],
-                        [
-                            'currency_id' => $priceData['currency_id'] ?? null,
-                            'price'       => $priceData['price'],
-                            'sale_price'  => $priceData['sale_price'] ?? null,
-                            'is_active'   => true,
-                        ]
-                    );
+    try {
+        foreach ($data['prices'] as $formatId => $countryPrices) {
+            foreach ($countryPrices as $countryId => $priceData) {
+                if (empty($priceData['price'])) {
+                    continue;
                 }
+
+                $applyTax   = isset($priceData['apply_tax']);
+                $isOnSale   = isset($priceData['is_on_sale']);
+
+                $price      = round((float) $priceData['price'], 2, PHP_ROUND_HALF_UP);
+                $salePrice  = ! empty($priceData['sale_price'])
+                    ? round((float) $priceData['sale_price'], 2, PHP_ROUND_HALF_UP)
+                    : null;
+                $taxRate    = $applyTax ? (float) ($priceData['tax_rate'] ?? 0) : 0;
+
+                $base = ($isOnSale && $salePrice !== null && $salePrice < $price)
+                    ? $salePrice
+                    : $price;
+
+                // Exact final price (e.g. 100.70)
+                $finalPrice = round($base + ($base * $taxRate / 100), 2, PHP_ROUND_HALF_UP);
+
+                // Rounded to nearest whole number (e.g. 101)
+                $finalPriceRounded = (int) round($finalPrice, 0, PHP_ROUND_HALF_UP);
+
+                // ✅ NEW: the adjustment made by rounding (e.g. 101 - 100.70 = 0.30)
+                $roundOffAmount = round($finalPriceRounded - $finalPrice, 2, PHP_ROUND_HALF_UP);
+
+                BookPrice::updateOrCreate(
+                    ['book_id' => $book->id, 'book_format_id' => $formatId, 'country_id' => $countryId],
+                    [
+                        'currency_id'          => $priceData['currency_id'] ?? null,
+                        'tax_id'               => $applyTax ? ($priceData['tax_id'] ?? null) : null,
+                        'tax_rate_snapshot'    => $applyTax ? ($priceData['tax_rate'] ?? null) : null,
+                        'price'                => $price,
+                        'sale_price'           => $salePrice,
+                        'discount_percent'     => $priceData['discount_percent'] ?? null,
+                        'is_on_sale'           => $isOnSale,
+                        'is_active'            => true,
+                        'final_price'          => $finalPrice,          // 100.70
+                        'final_price_rounded'  => $finalPriceRounded,   // 101
+                        'round_off_amount'     => $roundOffAmount,      // +0.30
+                    ]
+                );
             }
-
-            $book->update(['updated_by' => Auth::id()]);
-
-            return response()->json(['status' => 'success', 'message' => 'Pricing saved']);
-        } catch (\Throwable $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
         }
+
+        $book->update(['updated_by' => Auth::id()]);
+
+        return response()->json(['status' => 'success', 'message' => 'Pricing saved']);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
     }
+}
 
     /* ───────────────────────── Tab 5: Inventory ───────────────────────── */
 
@@ -700,7 +985,7 @@ private function validateEpubFile(UploadedFile $file): array
 
     /* ───────────────────────── Tab 8: Publishing (final) ───────────────────────── */
 
-    public function publish(Request $request, Book $book)
+public function publish(Request $request, Book $book)
 {
     $this->authorizeOwner($book);
 
@@ -708,10 +993,10 @@ private function validateEpubFile(UploadedFile $file): array
         $book->update([
             'status'                    => $request->input('status', 'draft'),
             'visibility'                => $request->input('visibility', 'public'),
-            'show_in_store'             => $request->boolean('show_in_store', true),
+            'show_in_store'             => $request->boolean('show_in_store'),
             'is_featured'               => $request->boolean('is_featured'),
             'is_bestseller'             => $request->boolean('is_bestseller'),
-            'is_never_miss_to_read'     => $request->boolean('is_never_miss_to_read'), // ← add this
+            'is_never_miss_to_read'     => $request->boolean('is_never_miss_to_read'),
             'badges'                    => $request->input('badges', []),
             'publish_type'              => $request->input('publish_type', 'immediately'),
             'publication_date'          => $request->input('publication_date'),
@@ -719,11 +1004,11 @@ private function validateEpubFile(UploadedFile $file): array
             'allow_pre_order'           => $request->boolean('allow_pre_order'),
             'pre_order_start_date'      => $request->input('pre_order_start_date'),
             'pre_order_end_date'        => $request->input('pre_order_end_date'),
-            'allow_reviews'             => $request->boolean('allow_reviews', true),
-            'enable_wishlist'           => $request->boolean('enable_wishlist', true),
-            'enable_share'              => $request->boolean('enable_share', true),
+            'allow_reviews'             => $request->boolean('allow_reviews'),
+            'enable_wishlist'           => $request->boolean('enable_wishlist'),
+            'enable_share'              => $request->boolean('enable_share'),
             'enable_compare'            => $request->boolean('enable_compare'),
-            'send_email_notification'   => $request->boolean('send_email_notification', true),
+            'send_email_notification'   => $request->boolean('send_email_notification'),
             'updated_by'                => Auth::id(),
         ]);
 
