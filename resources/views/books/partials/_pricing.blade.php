@@ -1,9 +1,9 @@
 <div class="tab-pane d-none" id="tab-pricing">
-    <p class="text-muted mb-3">Set a price per country for each enabled format.</p>
+    <p class="text-muted mb-3">Set your price per region for each enabled format.</p>
     <div id="pricingContainer">
         <div class="text-center text-muted py-4" id="pricingEmptyHint">
             <i class="feather-alert-circle fs-30 d-block mb-2 opacity-50"></i>
-            Go back to <strong>Formats</strong> and select at least one format first.
+            Go back to <strong>Format</strong> and select at least one format first.
         </div>
     </div>
     <div class="d-flex justify-content-between mt-4">

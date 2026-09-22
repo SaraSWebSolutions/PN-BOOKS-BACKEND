@@ -1,6 +1,6 @@
 {{-- resources/views/series/index.blade.php --}}
 @extends('layouts.app')
-@section('title', 'Series')
+@section('title', 'Series Catalog')
 
 @section('content')
 
@@ -77,11 +77,11 @@
 
 <div class="page-header">
     <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title"><h5 class="m-b-10">Series</h5></div>
+        <div class="page-header-title"><h5 class="m-b-10">Series Catalog</h5></div>
         <ul class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
             <li class="breadcrumb-item">Bookstore</li>
-            <li class="breadcrumb-item">Series</li>
+            <li class="breadcrumb-item">Series Catalog</li>
         </ul>
     </div>
     <div class="page-header-right ms-auto">

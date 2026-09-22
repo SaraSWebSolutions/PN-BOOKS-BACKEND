@@ -56,8 +56,7 @@ Route::get('/books/{book}/reviews', [BookReviewApiController::class, 'index']);
 
 Route::get('/website/stats/glance', [StoreStatsApiController::class, 'glance']);
 Route::get('/faqs', [FaqApiController::class, 'index']);
-Route::get('/support/subjects', [SupportSubjectApiController::class, 'index']);
-Route::post('/support/tickets', [SupportTicketApiController::class, 'store']);
+Route::get('/support/subjects', [SupportSubjectApiController::class, 'index']); // ✅ still public (FAQ/dropdown data, no user data involved)
 Route::get('/series', [SeriesApiController::class, 'index']);
 Route::get('/series/{idOrSlug}', [SeriesApiController::class, 'show']);
 
@@ -105,5 +104,9 @@ Route::patch('/orders/{order}/mark-cod-paid', [OrderApiController::class, 'markC
 
     Route::get('/profile/content-preferences',  [ContentPreferenceApiController::class, 'show']);
 Route::match(['put', 'post'], '/profile/content-preferences', [ContentPreferenceApiController::class, 'update']);
-    
+
+    // ✅ MOVED: ticket form only lives behind Profile > Help & Support,
+    // which already requires login — so this must require auth too.
+    Route::post('/support/tickets', [SupportTicketApiController::class, 'store']);
+
 });

@@ -1,9 +1,9 @@
 <div class="tab-pane d-none" id="tab-inventory">
-    <p class="text-muted mb-3">Manage stock for physical books. eBooks/Audiobooks are digital and don't require stock.</p>
+    <p class="text-muted mb-3">Manage stock for the Print Book format. Ebook and Audiobook are digital and don't require stock.</p>
     <div id="inventoryContainer">
         <div class="text-center text-muted py-4" id="inventoryEmptyHint">
             <i class="feather-alert-circle fs-30 d-block mb-2 opacity-50"></i>
-            Enable Physical Book in <strong>Formats</strong> to manage inventory.
+            Enable Print Book in <strong>Format</strong> to manage inventory.
         </div>
     </div>
     <div class="d-flex justify-content-between mt-4">

@@ -2,7 +2,7 @@
 <div class="tab-pane d-none" id="tab-publishing">
     <div class="row g-3">
         <div class="col-md-4">
-            <label class="form-label fw-semibold">Status</label>
+            <label class="form-label fw-semibold">Publishing Status</label>
             <select name="status" class="form-control select2-field">
                 <option value="published" {{ old('status', $book?->status) == 'published' ? 'selected' : '' }}>Published</option>
                 <option value="draft" {{ old('status', $book?->status ?? 'draft') == 'draft' ? 'selected' : '' }}>Draft</option>
@@ -26,11 +26,11 @@
 
         {{-- Schedule date/time — only relevant when publish_type = schedule --}}
         <div class="col-md-3" id="publicationDateWrap">
-            <label class="form-label fw-semibold">Publication Date</label>
+            <label class="form-label fw-semibold">On-sale Date</label>
             <input type="date" name="publication_date" class="form-control" value="{{ old('publication_date', $book?->publication_date?->format('Y-m-d')) }}">
         </div>
         <div class="col-md-3" id="publicationTimeWrap">
-            <label class="form-label fw-semibold">Publication Time</label>
+            <label class="form-label fw-semibold">On-sale Time</label>
             <input type="time" name="publication_time" class="form-control" value="{{ old('publication_time', $book?->publication_time) }}">
         </div>
 
@@ -42,7 +42,7 @@
         <div class="col-md-6 form-check form-switch">
             <input type="hidden" name="show_in_store" value="0">
             <input class="form-check-input" type="checkbox" name="show_in_store" value="1" {{ old('show_in_store', $book?->show_in_store ?? true) ? 'checked' : '' }}>
-            <label class="form-check-label">Show In Store</label>
+            <label class="form-check-label">List in Store</label>
         </div>
 
         <div class="col-md-6 form-check form-switch">

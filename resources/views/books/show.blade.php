@@ -33,8 +33,12 @@
                 </div>
 
                 <div class="col-md-7 col-8">
+                    @php
+                        // ✅ Match the index page's "Not Published" wording instead of raw "Draft"
+                        $statusLabel = $book->status === 'draft' ? 'Not Published' : ucfirst($book->status);
+                    @endphp
                     <div class="d-flex flex-wrap gap-2 mb-2">
-                        <span class="badge status-badge status-{{ $book->status }}">{{ ucfirst($book->status) }}</span>
+                        <span class="badge status-badge status-{{ $book->status }}">{{ $statusLabel }}</span>
                         <span class="badge status-badge status-visibility">{{ ucfirst($book->visibility) }}</span>
                         @if($book->is_featured)<span class="badge status-badge status-featured"><i class="feather-star fs-11 me-1"></i>Featured</span>@endif
                         @if($book->is_bestseller)<span class="badge status-badge status-bestseller"><i class="feather-trending-up fs-11 me-1"></i>Bestseller</span>@endif
@@ -58,10 +62,10 @@
 
                 <div class="col-md-3">
                     <div class="hero-fact-list">
-                        <div class="hero-fact"><span>Category</span><strong>{{ $book->category->name_en ?? '—' }}</strong></div>
-                        <div class="hero-fact"><span>Subcategory</span><strong>{{ $book->subcategory->name_en ?? '—' }}</strong></div>
+                        <div class="hero-fact"><span>Genre</span><strong>{{ $book->category->name_en ?? '—' }}</strong></div>
+                        <div class="hero-fact"><span>Additional Genre</span><strong>{{ $book->subcategory->name_en ?? '—' }}</strong></div>
                         <div class="hero-fact"><span>Series</span><strong>{{ $book->series->name ?? '—' }}</strong></div>
-                        <div class="hero-fact"><span>Languages</span><strong>{{ $book->languages->pluck('name')->join(', ') ?: '—' }}</strong></div>
+                        <div class="hero-fact"><span>Language</span><strong>{{ $book->languages->pluck('name')->join(', ') ?: '—' }}</strong></div>
                     </div>
                 </div>
             </div>
@@ -94,8 +98,8 @@
                 <div class="card-body">
                     <div class="row fs-13 gy-2">
                         <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">Publish Type</span><strong>{{ ucfirst($book->publish_type ?? '—') }}</strong></div>
-                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">Publication Date</span><strong>{{ $book->publication_date?->format('d M Y') ?? '—' }}</strong></div>
-                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">Publication Time</span><strong>{{ $book->publication_time ?? '—' }}</strong></div>
+                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">On-sale Date</span><strong>{{ $book->publication_date?->format('d M Y') ?? '—' }}</strong></div>
+                        <div class="col-md-3"><span class="text-muted d-block fs-11 text-uppercase">On-sale Time</span><strong>{{ $book->publication_time ?? '—' }}</strong></div>
                         <div class="col-md-3">
                             <span class="text-muted d-block fs-11 text-uppercase">Pre-Order</span>
                             <strong>
@@ -140,7 +144,7 @@
 
             {{-- ── Formats ──────────────────────────────────────────────── --}}
             <div class="card mb-4 section-card">
-                <div class="section-card-header"><i class="feather-layers"></i> Formats</div>
+                <div class="section-card-header"><i class="feather-layers"></i> Format</div>
                 <div class="card-body">
                     @forelse($book->formats as $format)
                         @php $settings = json_decode($format->pivot->settings ?? '{}', true) ?? []; @endphp
@@ -230,7 +234,7 @@
                     <thead>
                         <tr>
                             <th>Format</th>
-                            <th>Country</th>
+                            <th>Region</th>
                             <th class="text-end">Price</th>
                             <th class="text-end">Sale</th>
                             <th>Tax</th>

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Mail;
 
 class SupportTicketApiController extends Controller
 {
-    // POST /api/support/tickets (public — logged in or guest)
+    // POST /api/support/tickets (auth:sanctum — must be logged in)
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -23,8 +23,9 @@ class SupportTicketApiController extends Controller
 
         $subject = SupportSubject::findOrFail($data['subject_id']);
 
+    
         $ticket = SupportTicket::create([
-            'user_id'    => $request->user()?->id, // null if guest
+            'user_id'    => $request->user()->id,
             'name'       => $data['name'],
             'email'      => $data['email'],
             'subject_id' => $subject->id,

@@ -53,7 +53,7 @@ class OfferController extends Controller
         $data = $request->validate($this->rules());
         $data = $this->cleanTargetFields($data);
 
-        // ✅ NEW: find any already-active offer with the SAME scope
+        // Find any already-active promotion with the SAME scope
         // (same target_type + target id + country_id) whose date range
         // overlaps this new one, and deactivate it before creating this one.
         $conflicts = $this->findConflictingOffers($data);
@@ -76,7 +76,7 @@ class OfferController extends Controller
         $data = $request->validate($this->rules());
         $data = $this->cleanTargetFields($data);
 
-        // ✅ NEW: same overlap check, but exclude the offer being edited itself
+        // Same overlap check, but exclude the promotion being edited itself
         $conflicts = $this->findConflictingOffers($data, excludeId: $offer->id);
 
         if ($conflicts->isNotEmpty()) {
@@ -100,21 +100,7 @@ class OfferController extends Controller
         return $data;
     }
 
-    /**
-     * Finds active offers with the SAME scope as the offer being saved
-     * (same target_type + same target id + same country_id) whose date
-     * window overlaps the incoming starts_at/ends_at range.
-     *
-     * "Same scope" examples:
-     *  - target_type=all, country_id=null            -> another global "all books" offer
-     *  - target_type=book, book_id=5, country_id=6    -> another offer on that exact book+country
-     *  - target_type=category, category_id=2, country_id=null -> another global offer on that category
-     *
-     * Overlap logic (no dates = offer runs forever, so it always overlaps):
-     *   existing.ends_at is null OR existing.ends_at >= new.starts_at
-     *   AND
-     *   existing.starts_at is null OR existing.starts_at <= new.ends_at
-     */
+    
     private function findConflictingOffers(array $data, ?int $excludeId = null): Collection
     {
         $query = Offer::where('status', true)
@@ -153,15 +139,15 @@ class OfferController extends Controller
     private function buildSaveMessage(Offer $offer, Collection $conflicts, bool $created): string
     {
         $base = $created
-            ? "Offer '{$offer->title}' created! 🎉"
-            : "Offer '{$offer->title}' updated! ✅";
+            ? "Promotion '{$offer->title}' created! 🎉"
+            : "Promotion '{$offer->title}' updated! ✅";
 
         if ($conflicts->isEmpty()) {
             return $base;
         }
 
         $names = $conflicts->pluck('title')->map(fn ($t) => "'{$t}'")->implode(', ');
-        $plural = $conflicts->count() > 1 ? 'offers' : 'offer';
+        $plural = $conflicts->count() > 1 ? 'promotions' : 'promotion';
 
         return $base . " Note: existing {$plural} {$names} overlapped this date range and " .
             ($conflicts->count() > 1 ? 'were' : 'was') . ' automatically set to inactive.';

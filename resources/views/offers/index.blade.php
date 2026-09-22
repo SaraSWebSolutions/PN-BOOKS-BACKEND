@@ -1,6 +1,6 @@
 {{-- resources/views/offers/index.blade.php --}}
 @extends('layouts.app')
-@section('title', 'Offers')
+@section('title', 'Promotions')
 
 @section('content')
 
@@ -15,7 +15,7 @@
         <div>
             <h5 class="offcanvas-title fw-bold mb-0">
                 <i id="canvasIcon" class="feather-plus-circle me-2 text-primary"></i>
-                <span id="canvasTitle">Add Offer</span>
+                <span id="canvasTitle">Add Promotion</span>
             </h5>
             <small class="text-muted">Create a discount for a book, category, format, or the whole store.</small>
         </div>
@@ -28,14 +28,14 @@
             <input type="hidden" id="editOfferId">
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Offer Title <span class="text-danger">*</span></label>
+                <label class="form-label fw-semibold">Promotion Title <span class="text-danger">*</span></label>
                 <input type="text" id="offer_title" class="form-control" placeholder="e.g. Hari Raya Sale">
                 <div class="field-error" id="titleError"></div>
             </div>
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Description</label>
-                <textarea id="offer_description" class="form-control" rows="2" placeholder="Optional note about this offer"></textarea>
+                <textarea id="offer_description" class="form-control" rows="2" placeholder="Optional note about this promotion"></textarea>
                 <div class="field-error" id="descriptionError"></div>
             </div>
 
@@ -92,12 +92,12 @@
             <div class="mb-3">
                 <label class="form-label fw-semibold">Country</label>
                 <select id="offer_country_id" class="form-control select2-field" data-placeholder="All Countries">
-                    <option value="">All Countries (global offer)</option>
+                    <option value="">All Countries (global promotion)</option>
                     @foreach($countries as $country)
                         <option value="{{ $country->id }}">{{ $country->name }}</option>
                     @endforeach
                 </select>
-                <small class="text-muted">Leave as "All Countries" if this offer should apply everywhere, including Singapore.</small>
+                <small class="text-muted">Leave as "All Countries" if this promotion should apply everywhere, including Singapore.</small>
                 <div class="field-error" id="country_idError"></div>
             </div>
 
@@ -150,22 +150,22 @@
 
 <div class="page-header">
     <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title"><h5 class="m-b-10">Offers</h5></div>
+        <div class="page-header-title"><h5 class="m-b-10">Promotions</h5></div>
         <ul class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
             <li class="breadcrumb-item">Bookstore</li>
-            <li class="breadcrumb-item">Offers</li>
+            <li class="breadcrumb-item">Promotions</li>
         </ul>
     </div>
     <div class="page-header-right ms-auto">
-        <button class="btn btn-primary" onclick="openAdd()"><i class="feather-plus me-2"></i>Add Offer</button>
+        <button class="btn btn-primary" onclick="openAdd()"><i class="feather-plus me-2"></i>Add Promotion</button>
     </div>
 </div>
 
 <div class="main-content">
     <div class="row g-3 mb-4">
         @foreach([
-            ['label'=>'Total Offers','value'=>$stats['total'],'icon'=>'feather-tag','bg'=>'rgba(99,102,241,.1)','color'=>'#6366f1'],
+            ['label'=>'Total Promotions','value'=>$stats['total'],'icon'=>'feather-tag','bg'=>'rgba(99,102,241,.1)','color'=>'#6366f1'],
             ['label'=>'Active','value'=>$stats['active'],'icon'=>'feather-check-circle','bg'=>'rgba(16,185,129,.1)','color'=>'#10b981','fw'=>'text-success'],
             ['label'=>'Inactive','value'=>$stats['inactive'],'icon'=>'feather-pause-circle','bg'=>'rgba(234,179,8,.1)','color'=>'#eab308','fw'=>'text-warning'],
         ] as $s)
@@ -189,7 +189,7 @@
 
     <div class="card stretch stretch-full">
         <div class="card-header d-flex align-items-center justify-content-between gap-3 py-3 flex-wrap">
-            <span class="fw-semibold">All Offers</span>
+            <span class="fw-semibold">All Promotions</span>
 
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <div class="d-flex align-items-center gap-2">
@@ -213,7 +213,7 @@
                     </select>
                 </div>
 
-                {{-- ✅ NEW: Date filter — shows offers running on the picked date --}}
+                {{-- ✅ NEW: Date filter — shows promotions running on the picked date --}}
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted fs-12">On date</span>
                     <input type="date" id="dateFilter" class="form-control form-control-sm" style="width:auto;">
@@ -295,7 +295,7 @@
                         <tr id="noDataRow">
                             <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="feather-tag fs-30 d-block mb-2 opacity-50"></i>
-                                No offers found.
+                                No promotions found.
                             </td>
                         </tr>
                         @endforelse
@@ -460,7 +460,7 @@ document.getElementById('clearSelectedBook').addEventListener('click', function 
         return row.dataset.is_active === status;
     }
 
-    // ✅ NEW: shows only offers that are actually running on the picked date
+    // Shows only promotions that are actually running on the picked date
     // (starts_at empty or <= date) AND (ends_at empty or >= date) — plain
     // string comparison works fine since both sides are 'YYYY-MM-DD'.
     function matchesDate(row, date) {
@@ -561,7 +561,7 @@ function resetForm(){
 function openAdd(){
     editMode = false; resetForm();
     document.getElementById('canvasIcon').className = 'feather-plus-circle me-2 text-primary';
-    document.getElementById('canvasTitle').textContent = 'Add Offer';
+    document.getElementById('canvasTitle').textContent = 'Add Promotion';
     document.getElementById('offerBtnText').textContent = 'Save';
     new bootstrap.Offcanvas(document.getElementById('offerCanvas')).show();
 }
@@ -571,7 +571,7 @@ function openEdit(btn){
     const d = document.getElementById(btn.dataset.row).dataset;
 
     document.getElementById('canvasIcon').className = 'feather-edit-3 me-2 text-warning';
-    document.getElementById('canvasTitle').textContent = 'Edit Offer';
+    document.getElementById('canvasTitle').textContent = 'Edit Promotion';
     document.getElementById('offerBtnText').textContent = 'Update';
 
     document.getElementById('editOfferId').value = d.id;

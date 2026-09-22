@@ -46,7 +46,7 @@
                 </div>
 
               <div class="col-md-6">
-    <label class="form-label fw-semibold">ISBN <span class="text-danger">*</span></label>
+    <label class="form-label fw-semibold">ISBN<span class="text-danger">*</span></label>
     <input type="text" name="isbn" id="isbn_field" required class="form-control" value="{{ old('isbn', $book->isbn ?? '') }}" placeholder="e.g. 9781976556227">
     {{-- Reserves real layout space when shown, so it pushes Subcategory
          down instead of floating over it --}}
@@ -57,12 +57,12 @@
 
                 <div class="col-md-6">
                     <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                        <span>Genre <span class="text-danger">*</span></span>
+                        <span>Genre (BISAC) <span class="text-danger">*</span></span>
                         <button type="button" class="btn btn-sm btn-quick-add" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCategory" title="Add new category">
                             <i class="feather-plus"></i>
                         </button>
                     </label>
-                    <select name="category_id" id="category_id" class="form-control select2-field" data-placeholder="Select category…">
+                    <select name="category_id" id="category_id" class="form-control select2-field" data-placeholder="Select genre…">
                         <option value=""></option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat->id }}" {{ old('category_id', $book->category_id ?? '') == $cat->id ? 'selected' : '' }}>{{ $cat->name_en }}</option>
@@ -72,12 +72,12 @@
 
                 <div class="col-md-6">
                     <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                        <span>Subgenre</span>
+                        <span>Additional Genre</span>
                         <button type="button" class="btn btn-sm btn-quick-add" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSubcategory" title="Add new subcategory">
                             <i class="feather-plus"></i>
                         </button>
                     </label>
-                    <select name="subcategory_id" id="subcategory_id" class="form-control select2-field" data-placeholder="Select subcategory…">
+                    <select name="subcategory_id" id="subcategory_id" class="form-control select2-field" data-placeholder="Select additional genre…">
                         @if(isset($book) && $book->subcategory)
                             <option value="{{ $book->subcategory->id }}" selected>{{ $book->subcategory->name_en }}</option>
                         @else
@@ -88,7 +88,7 @@
 
                 <div class="col-md-6">
                     <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                        <span>Series</span>
+                        <span>Series name</span>
                         <button type="button" class="btn btn-sm btn-quick-add" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSeries" title="Add new series">
                             <i class="feather-plus"></i>
                         </button>
@@ -103,7 +103,7 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Language(s) <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold">Language <span class="text-danger">*</span></label>
                     <select name="languages[]" class="form-control select2-field" data-placeholder="Select language(s)…" multiple>
                         @php
                             $selectedLangs = old('languages', isset($book) ? $book->languages->pluck('id')->toArray() : []);
@@ -127,7 +127,7 @@
         </div>
 
       <div class="col-md-4">
-    <label class="form-label fw-semibold">Book Cover</label>
+    <label class="form-label fw-semibold">Cover image</label>
     <div class="border rounded-3 p-3 text-center">
         <img id="coverPreview"
              src="{{ $book->cover_image_url ?? 'https://placehold.co/220x300?text=Book+Cover' }}"
@@ -150,16 +150,16 @@
 
 <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasCategory">
     <div class="offcanvas-header">
-        <h5 class="mb-0">Add Category</h5>
+        <h5 class="mb-0">Add Genre</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body">
         <div class="mb-3">
-            <label class="form-label">Category Name (English) <span class="text-danger">*</span></label>
+            <label class="form-label">Genre Name (English) <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="qc_category_name_en" placeholder="e.g. Fiction">
         </div>
         <div class="mb-3">
-            <label class="form-label">Category Name (Malay)</label>
+            <label class="form-label">Genre Name (Malay)</label>
             <input type="text" class="form-control" id="qc_category_name_ms">
         </div>
         <button type="button" class="btn btn-primary w-100" onclick="quickCreate('category')">
@@ -170,25 +170,25 @@
 
 <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasSubcategory">
     <div class="offcanvas-header">
-        <h5 class="mb-0">Add Subcategory</h5>
+        <h5 class="mb-0">Add Additional Genre</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body">
         <div class="mb-3">
-            <label class="form-label">Parent Category <span class="text-danger">*</span></label>
+            <label class="form-label">Parent Genre <span class="text-danger">*</span></label>
             <select class="form-control" id="qc_subcategory_category_id">
-                <option value="">Select category…</option>
+                <option value="">Select genre…</option>
                 @foreach($categories as $cat)
                     <option value="{{ $cat->id }}">{{ $cat->name_en }}</option>
                 @endforeach
             </select>
         </div>
         <div class="mb-3">
-            <label class="form-label">Subcategory Name (English) <span class="text-danger">*</span></label>
+            <label class="form-label">Additional Genre Name (English) <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="qc_subcategory_name_en" placeholder="e.g. Sci-Fi">
         </div>
         <div class="mb-3">
-            <label class="form-label">Subcategory Name (Malay)</label>
+            <label class="form-label">Additional Genre Name (Malay)</label>
             <input type="text" class="form-control" id="qc_subcategory_name_ms">
         </div>
         <button type="button" class="btn btn-primary w-100" onclick="quickCreate('subcategory')">

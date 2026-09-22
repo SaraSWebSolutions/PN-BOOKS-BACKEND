@@ -70,15 +70,15 @@
                     <span class="text-muted fs-12">entries</span>
                 </div>
 
-                {{-- ✅ NEW — Category filter (Select2) --}}
-                <select id="categoryFilter" class="form-select form-select-sm select2-filter" data-placeholder="All Categories" style="width:170px;">
+                {{-- ✅ Genre filter (Select2) --}}
+                <select id="categoryFilter" class="form-select form-select-sm select2-filter" data-placeholder="All Genres" style="width:170px;">
                     <option value=""></option>
                     @foreach($categories as $cat)
                         <option value="{{ $cat->id }}">{{ $cat->name_en }}</option>
                     @endforeach
                 </select>
 
-                {{-- ✅ NEW — Author filter (Select2) --}}
+                {{-- ✅ Author filter (Select2) --}}
                 <select id="authorFilter" class="form-select form-select-sm select2-filter" data-placeholder="All Authors" style="width:170px;">
                     <option value=""></option>
                     @foreach($authors as $author)
@@ -95,7 +95,7 @@
 
                 <select id="statusFilter" class="form-select form-select-sm" style="width:150px;">
                     <option value="">All Status</option>
-                    <option value="draft">Draft</option>
+                    <option value="draft">Not Published</option>
                     <option value="published">Published</option>
                     <option value="private">Private</option>
                 </select>
@@ -115,11 +115,11 @@
                             <th>#</th>
                             <th>Cover</th>
                             <th>Title</th>
-                            <th>Category</th>
+                            <th>Genre</th>
                             <th>Author</th>
                             <th>Type</th>
-                            <th class="text-center">Status</th>
                             <th class="text-center">Featured</th>
+                            <th>Status</th> {{-- ✅ NEW --}}
                             <th class="text-end">Actions</th>
                         </tr>
                     </thead>
@@ -135,6 +135,10 @@
                                 'ebook'     => ['icon' => 'feather-tablet',      'bg' => 'bg-light-info',    'color' => 'text-info'],
                                 'audiobook' => ['icon' => 'feather-headphones', 'bg' => 'bg-light-warning', 'color' => 'text-warning'],
                             ];
+
+                            // ✅ NEW — Public PN Books URL for this book (used by the "Live on PN Books" column)
+                            $pnBooksBaseUrl = rtrim(config('services.pnbooks.url', 'https://pnbooks.cnxhub.in'), '/');
+                            $pnBooksUrl = $pnBooksBaseUrl . '/books/' . $book->id;
                         @endphp
                         <tr class="book-row" id="book-row-{{ $book->id }}"
                             data-type="{{ implode(' ', $formatCodes) }}"
@@ -182,16 +186,28 @@
                                 @endforelse
                             </td>
                             <td class="text-center">
-                                <span class="badge
-                                    {{ $book->status === 'published' ? 'bg-light-success text-success' :
-                                       ($book->status === 'draft' ? 'bg-light-warning text-warning' : 'bg-light-danger text-danger') }}
-                                    text-capitalize">{{ $book->status }}</span>
-                            </td>
-                            <td class="text-center">
                                 <div class="form-check form-switch d-flex justify-content-center mb-0">
                                     <input class="form-check-input featured-toggle" type="checkbox"
                                            {{ $book->is_featured ? 'checked' : '' }} data-id="{{ $book->id }}">
                                 </div>
+                            </td>
+                            {{-- ✅ NEW — Live on PN Books --}}
+                            <td>
+                                @if($book->status === 'published')
+                                    <div class="d-flex align-items-center justify-content-between gap-2 pnbooks-live">
+                                        <span class="d-flex align-items-center gap-1 text-success fs-13 fw-medium">
+                                            <i class="feather feather-check-circle fs-14"></i>Live on PN Books
+                                        </span>
+                                        <a href="{{ $pnBooksUrl }}" target="_blank" rel="noopener"
+                                           class="avatar-text avatar-md" title="View live on PN Books">
+                                            <i class="feather feather-external-link"></i>
+                                        </a>
+                                    </div>
+                                @else
+                                    <span class="d-flex align-items-center gap-1 text-muted fs-13">
+                                        <i class="feather feather-circle fs-14"></i>Not published
+                                    </span>
+                                @endif
                             </td>
                             <td>
                                 <div class="hstack gap-2 justify-content-end">
@@ -292,6 +308,11 @@
 /* ── Format badges (Physical / eBook / Audiobook) ── */
 .bg-light-secondary{ background:#eef0f4 !important; }
 .text-secondary{ color:#6b7280 !important; }
+
+/* ── Live on PN Books badge (matches Google Play style in reference screenshot) ── */
+.pnbooks-live{ min-width:170px; }
+.pnbooks-live .avatar-text{ color:#4f5b76; }
+.pnbooks-live .avatar-text:hover{ color:#7b5cf0; }
 
 .custom-pagination ul{
     list-style:none;

@@ -1,10 +1,10 @@
 <div class="tab-pane d-none" id="tab-files">
-    <p class="text-muted mb-3">Upload files for digital formats and configure DRM protection.</p>
+    <p class="text-muted mb-3">Upload content files for Ebook and Audiobook formats and configure content protection.</p>
 
     <div id="filesContainer">
         <div class="text-center text-muted py-4" id="filesEmptyHint">
             <i class="feather-alert-circle fs-30 d-block mb-2 opacity-50"></i>
-            Enable eBook or Audiobook in <strong>Formats</strong> to upload files here.
+            Enable Ebook or Audiobook in <strong>Format</strong> to upload content files here.
         </div>
     </div>
 

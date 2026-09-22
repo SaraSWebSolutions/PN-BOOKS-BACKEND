@@ -1,6 +1,6 @@
 {{-- resources/views/subcategories/index.blade.php --}}
 @extends('layouts.app')
-@section('title', 'Subcategories')
+@section('title', 'Additional Genres')
 
 @section('content')
 
@@ -14,9 +14,9 @@
         <div>
             <h5 class="offcanvas-title fw-bold mb-0">
                 <i id="canvasIcon" class="feather-plus-circle me-2 text-primary"></i>
-                <span id="canvasTitle">Add Subcategory</span>
+                <span id="canvasTitle">Add Additional Genre</span>
             </h5>
-            <small class="text-muted">Nested under a parent category.</small>
+            <small class="text-muted">Nested under a parent genre.</small>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
@@ -27,8 +27,8 @@
             <input type="hidden" id="editSubId">
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Parent Category <span class="text-danger">*</span></label>
-                <select id="sub_category_id" class="form-control select2-field" data-placeholder="Select category…">
+                <label class="form-label fw-semibold">Parent Genre <span class="text-danger">*</span></label>
+                <select id="sub_category_id" class="form-control select2-field" data-placeholder="Select genre…">
                     <option value=""></option>
                     @foreach($categories as $c)
                         <option value="{{ $c->id }}">{{ $c->name_en }}</option>
@@ -38,13 +38,13 @@
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Subcategory Name (English) <span class="text-danger">*</span></label>
+                <label class="form-label fw-semibold">Additional Genre Name (English) <span class="text-danger">*</span></label>
                 <input type="text" id="sub_name_en" class="form-control" placeholder="e.g. Sci-Fi, Biography…">
                 <div class="field-error" id="name_enError"></div>
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-semibold">Subcategory Name (Malay)</label>
+                <label class="form-label fw-semibold">Additional Genre Name (Malay)</label>
                 <input type="text" id="sub_name_ms" class="form-control" placeholder="cth. Fiksyen Sains, Biografi…">
                 <div class="field-error" id="name_msError"></div>
             </div>
@@ -83,15 +83,15 @@
 
 <div class="page-header">
     <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title"><h5 class="m-b-10">Subcategories</h5></div>
+        <div class="page-header-title"><h5 class="m-b-10">Additional Genres</h5></div>
         <ul class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
             <li class="breadcrumb-item">Bookstore</li>
-            <li class="breadcrumb-item">Subcategories</li>
+            <li class="breadcrumb-item">Additional Genres</li>
         </ul>
     </div>
     <div class="page-header-right ms-auto">
-        <button class="btn btn-primary" onclick="openAdd()"><i class="feather-plus me-2"></i>Add Subcategory</button>
+        <button class="btn btn-primary" onclick="openAdd()"><i class="feather-plus me-2"></i>Add Additional Genre</button>
     </div>
 </div>
 
@@ -122,7 +122,7 @@
 
     <div class="card stretch stretch-full">
         <div class="card-header d-flex align-items-center justify-content-between gap-3 py-3 flex-wrap">
-            <span class="fw-semibold">All Subcategories</span>
+            <span class="fw-semibold">All Additional Genres</span>
 
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <div class="d-flex align-items-center gap-2">
@@ -149,9 +149,9 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Subcategory (EN)</th>
-                            <th>Subcategory (MS)</th>
-                            <th>Parent Category</th>
+                            <th>Additional Genre (EN)</th>
+                            <th>Additional Genre (MS)</th>
+                            <th>Parent Genre</th>
                             <th>Description (EN)</th>
                             <th class="text-center">Status</th>
                             <th class="text-end">Actions</th>
@@ -198,7 +198,7 @@
                         <tr id="noDataRow">
                             <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="feather-list fs-30 d-block mb-2 opacity-50"></i>
-                                No subcategories found.
+                                No additional genres found.
                             </td>
                         </tr>
                         @endforelse
@@ -415,7 +415,7 @@ function resetForm(){
 function openAdd(){
     editMode=false; resetForm();
     document.getElementById('canvasIcon').className='feather-plus-circle me-2 text-primary';
-    document.getElementById('canvasTitle').textContent='Add Subcategory';
+    document.getElementById('canvasTitle').textContent='Add Additional Genre';
     document.getElementById('subBtnText').textContent='Save';
     new bootstrap.Offcanvas(document.getElementById('subCanvas')).show();
 }
@@ -423,7 +423,7 @@ function openEdit(btn){
     editMode=true; resetForm();
     const d=document.getElementById(btn.dataset.row).dataset;
     document.getElementById('canvasIcon').className='feather-edit-3 me-2 text-warning';
-    document.getElementById('canvasTitle').textContent='Edit Subcategory';
+    document.getElementById('canvasTitle').textContent='Edit Additional Genre';
     document.getElementById('subBtnText').textContent='Update';
     document.getElementById('editSubId').value=d.id;
     document.getElementById('sub_name_en').value=d.nameEn;

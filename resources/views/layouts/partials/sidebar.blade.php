@@ -41,25 +41,12 @@
                     </ul>
                 </li>
 
-                  
-                <li class="nxl-item nxl-hasmenu {{ request()->routeIs('orders.*') ? 'active' : '' }}">
-    <a href="javascript:void(0);" class="nxl-link">
-        <span class="nxl-micon"><i class="feather-shopping-cart"></i></span>
-        <span class="nxl-mtext">Orders</span>
-        <span class="nxl-arrow"><i class="feather-chevron-right"></i></span>
-    </a>
+                {{-- ✅ REMOVED duplicate unguarded "Orders" menu that was here —
+                     it bypassed the @can('view_orders sidebar') check below and
+                     showed Orders twice in the sidebar. Kept only the guarded
+                     one under the Sales section. --}}
 
-    <ul class="nxl-submenu">
-        <li class="nxl-item {{ request()->routeIs('orders.index') ? 'active' : '' }}">
-            <a class="nxl-link" href="{{ route('orders.index') }}">
-                <i class="feather-list me-2"></i> All Orders
-            </a>
-        </li>
-    </ul>
-</li>
-
-
-                {{-- Categories & Subcategories --}}
+                {{-- Genres & Subcategories --}}
                 <li class="nxl-item nxl-hasmenu {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') ? 'active' : '' }}">
                     <a href="javascript:void(0);" class="nxl-link">
                         <span class="nxl-micon"><i class="feather-grid"></i></span>
@@ -74,7 +61,7 @@
                         </li>
                         <li class="nxl-item {{ request()->routeIs('subcategories.index') ? 'active' : '' }}">
                             <a class="nxl-link" href="{{ route('subcategories.index') }}">
-                                <i class="feather-list me-2"></i> Subcategories
+                                <i class="feather-list me-2"></i> Additional Genres
                             </a>
                         </li>
                     </ul>
@@ -92,7 +79,7 @@
                 <li class="nxl-item">
                     <a class="nxl-link {{ request()->routeIs('book-formats.index') ? 'active' : '' }}" href="{{ route('book-formats.index') }}">
                         <span class="nxl-micon"><i class="feather-layers"></i></span>
-                        <span class="nxl-mtext">Book Formats</span>
+                        <span class="nxl-mtext">Formats</span>
                     </a>
                 </li>
 

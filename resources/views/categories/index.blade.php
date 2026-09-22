@@ -1,6 +1,6 @@
 {{-- resources/views/categories/index.blade.php --}}
 @extends('layouts.app')
-@section('title', 'Categories')
+@section('title', 'Genres')
 
 @section('content')
 
@@ -16,9 +16,9 @@
         <div>
             <h5 class="offcanvas-title fw-bold mb-0">
                 <i id="canvasIcon" class="feather-plus-circle me-2 text-primary"></i>
-                <span id="canvasTitle">Add Category</span>
+                <span id="canvasTitle">Add Genre</span>
             </h5>
-            <small class="text-muted">Book categories (e.g. Fiction, Non-Fiction).</small>
+            <small class="text-muted">Book genres (e.g. Fiction, Non-Fiction).</small>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
@@ -29,13 +29,13 @@
             <input type="hidden" id="editCatId">
 
            <div class="mb-3">
-    <label class="form-label fw-semibold">Category Name (English) <span class="text-danger">*</span></label>
+    <label class="form-label fw-semibold">Genre Name (English) <span class="text-danger">*</span></label>
     <input type="text" id="cat_name_en" class="form-control" placeholder="e.g. Fiction, Academic, Comics…">
     <div class="field-error" id="name_enError"></div>
 </div>
 
 <div class="mb-3">
-    <label class="form-label fw-semibold">Category Name (Malay)</label>
+    <label class="form-label fw-semibold">Genre Name (Malay)</label>
     <input type="text" id="cat_name_ms" class="form-control" placeholder="cth. Fiksyen, Akademik, Komik…">
     <div class="field-error" id="name_msError"></div>
 </div>
@@ -52,7 +52,7 @@
     <div class="field-error" id="description_msError"></div>
 </div>
             <div class="mb-3">
-                <label class="form-label fw-semibold">Category Image</label>
+                <label class="form-label fw-semibold">Genre Image</label>
                 <input type="file" id="cat_image" class="form-control" accept="image/*">
                 <div class="field-error" id="imageError"></div>
             </div>
@@ -79,16 +79,16 @@
 
 <div class="page-header">
     <div class="page-header-left d-flex align-items-center">
-        <div class="page-header-title"><h5 class="m-b-10">Categories</h5></div>
+        <div class="page-header-title"><h5 class="m-b-10">Genres</h5></div>
         <ul class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
             <li class="breadcrumb-item">Bookstore</li>
-            <li class="breadcrumb-item">Categories</li>
+            <li class="breadcrumb-item">Genres</li>
         </ul>
     </div>
     <div class="page-header-right ms-auto">
         <button class="btn btn-primary" onclick="openAdd()">
-            <i class="feather-plus me-2"></i>Add Category
+            <i class="feather-plus me-2"></i>Add Genre
         </button>
     </div>
 </div>
@@ -121,7 +121,7 @@
 
     <div class="card stretch stretch-full">
         <div class="card-header d-flex align-items-center justify-content-between gap-3 py-3 flex-wrap">
-            <span class="fw-semibold">All Categories</span>
+            <span class="fw-semibold">All Genres</span>
 
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 {{-- Show X entries — pure front-end, no reload --}}
@@ -139,7 +139,7 @@
 
                 <div class="input-group input-group-sm" style="max-width:220px;">
                     <span class="input-group-text"><i class="feather-search"></i></span>
-                    <input type="text" id="searchInput" class="form-control" placeholder="Search categories…">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search genres…">
                 </div>
             </div>
         </div>
@@ -150,7 +150,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Category</th>
+                            <th>Genre</th>
                             <th>Description</th>
                             <th class="text-center">Subcategories</th>
                             <th class="text-center">Books</th>
@@ -210,7 +210,7 @@
                         <tr id="noDataRow">
                             <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="feather-grid fs-30 d-block mb-2 opacity-50"></i>
-                                No categories found. Click <strong>Add Category</strong> to get started.
+                                No genres found. Click <strong>Add Genre</strong> to get started.
                             </td>
                         </tr>
                         @endforelse
@@ -441,7 +441,7 @@ function openAdd() {
     editMode = false;
     resetForm();
     document.getElementById('canvasIcon').className   = 'feather-plus-circle me-2 text-primary';
-    document.getElementById('canvasTitle').textContent = 'Add Category';
+    document.getElementById('canvasTitle').textContent = 'Add Genre';
     document.getElementById('catBtnText').textContent  = 'Save';
     new bootstrap.Offcanvas(document.getElementById('catCanvas')).show();
 }
@@ -456,6 +456,9 @@ function openEdit(btn) {
     document.getElementById('cat_description_en').value  = d.descriptionEn || '';
     document.getElementById('cat_description_ms').value  = d.descriptionMs || '';
     document.getElementById('cat_is_active').value       = d.isActive;
+    document.getElementById('canvasIcon').className   = 'feather-edit-3 me-2 text-primary';
+    document.getElementById('canvasTitle').textContent = 'Edit Genre';
+    document.getElementById('catBtnText').textContent  = 'Update';
     new bootstrap.Offcanvas(document.getElementById('catCanvas')).show();
 }
 
